@@ -1,5 +1,5 @@
 [project]
-name = "aerobar-cad"
+name = "seth-3d"
 version = "0.1.0"
 description = "build123d CAD parts + Playwright snapshots"
 # 3.14 has no build123d/OCP wheels yet, so we cap at <3.13 (mise pins 3.12.13).
