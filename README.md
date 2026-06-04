@@ -28,14 +28,14 @@ Each generator prints its bounding box / volume and writes its CAD artifacts
 (`.step`, `.stl`, `.glb`) next to itself:
 
 ```bash
-uv run python aerobar-crossbar/aerobar_crossbar.py
+uv run python <part>/<part>.py
 # or, since mise auto-activates the venv:
-python aerobar-crossbar/aerobar_crossbar.py
+python <part>/<part>.py
 ```
 
 ## CAD Viewer
 
-Use the `cad:cad-viewer` skill (in Claude Code: `/cad:cad-viewer aerobar-crossbar/aerobar_crossbar.step`) — it starts/reuses the local viewer server and hands back a ready-to-open link.
+Use the `cad:cad-viewer` skill (in Claude Code: `/cad:cad-viewer <part>/<part>.step`) — it starts/reuses the local viewer server and hands back a ready-to-open link.
 
 To start the server directly instead, run its `backend/server.mjs` from the
 installed skill (the path is versioned, so locate it dynamically):
@@ -49,9 +49,8 @@ It prints a base URL (e.g. `http://127.0.0.1:4178/`). Open a model by appending
 an absolute `?dir=` (the model folder) and a `?file=` relative to it:
 
 ```
-http://127.0.0.1:4178/?dir=/Users/seth/Sites/3d/aerobar-crossbar&file=aerobar_crossbar.step
+http://127.0.0.1:4178/?dir=/absolute/path/to/<part>&file=<part>.step
 ```
 
-Swap `file=` for `.aerobar_crossbar.step.glb` or `aerobar_crossbar.stl` to load
-the lighter tessellated mesh. The server self-stops after 12h
-(`--shutdown-after`).
+Swap `file=` for `.<part>.step.glb` or `<part>.stl` to load the lighter
+tessellated mesh. The server self-stops after 12h (`--shutdown-after`).
