@@ -7,7 +7,7 @@ description: >-
   attach, embed, add, put, post, drop, show, document. Also covers visually documenting test runs,
   bug repros, UI states, or CI failures on an existing PR. The `gh` CLI cannot upload images;
   this skill drives a real browser to GitHub's user-attachments uploader.
-allowed-tools: Bash(gh:*), Bash(cp:*), ToolSearch, Read
+allowed-tools: Bash(gh:*), Bash(cp:*), Bash(mkdir:*), Bash(rm:*), ToolSearch, Read
 ---
 
 # Upload Image to PR
@@ -144,25 +144,35 @@ Use the **standard textarea selector** from step 6, then assign `ta.value = ""`:
 
 ## Step 8: Embed images in the PR
 
-In both options below, substitute whichever form (markdown `![](...)` or HTML `<img ...>`) GitHub returned in step 6 — preserve it verbatim instead of rewrapping.
+Substitute whichever form (markdown `![](...)` or HTML `<img ...>`) GitHub returned in step 6 — preserve it verbatim instead of rewrapping.
 
-**Option A — Update PR description** (append images to existing body):
+**Post as a comment** (the default). A comment keeps the description tight and skimmable, and avoids re-editing the body (and its notification noise) on every recapture.
+
+If a screenshots comment already exists (one **you** authored whose body starts with `## Screenshots`), edit it in place instead of posting a new one. Filter on the author too — otherwise a `## Screenshots` comment from someone else would get clobbered:
+```bash
+ME=$(gh api user --jq .login)
+SCREENSHOT_COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{PR_NUMBER}/comments \
+  --jq ".[] | select(.user.login == \"$ME\" and (.body | startswith(\"## Screenshots\"))) | .id" | head -1)
+```
+
+Write the comment body to a temp file:
+```
+## Screenshots
+
+<image markup from step 6>
+```
+
+- If `$SCREENSHOT_COMMENT_ID` is empty: `gh pr comment {PR_NUMBER} --body-file <tmp-comment-file>`.
+- Otherwise: `gh api -X PATCH repos/{owner}/{repo}/issues/comments/$SCREENSHOT_COMMENT_ID -F body=@<tmp-comment-file>` (use `-F`, not `-f` — only `-F/--field` expands `@<path>` to the file's contents; `-f` would set the body to the literal string `@<tmp-comment-file>`).
+
+Only edit the PR description instead when the user explicitly asks for it:
 ```bash
 EXISTING_BODY=$(gh pr view {PR_NUMBER} --json body -q .body)
 
 gh pr edit {PR_NUMBER} --body "$(printf '%s\n\n## Screenshots\n\n%s' "$EXISTING_BODY" "<image markup from step 6>")"
 ```
 
-If `$EXISTING_BODY` already contains a `## Screenshots` heading (e.g., on re-runs), this will create a duplicate section. Check first with `grep -q "^## Screenshots" <<< "$EXISTING_BODY"` and either replace the existing section or post as a comment (Option B) instead.
-
-**Option B — Post as a new comment**:
-```bash
-gh pr comment {PR_NUMBER} --body "## Screenshots
-
-<image markup from step 6>"
-```
-
-Use Option A by default unless the user explicitly asks for a comment, or if the PR description is already long and a comment would be cleaner.
+If `$EXISTING_BODY` already contains a `## Screenshots` heading (e.g., on re-runs), this will create a duplicate section. Check first with `grep -q "^## Screenshots" <<< "$EXISTING_BODY"` and either replace the existing section or post as a comment instead.
 
 ## Step 9: Verify the result
 
