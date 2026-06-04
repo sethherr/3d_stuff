@@ -11,5 +11,12 @@ __pycache__/
 # Playwright MCP working dir (browser profile, snapshots, scratch uploads)
 .playwright-mcp/
 
+# Foam lattice exports are huge (2000+ separate solids -> 300+ MB STL/GLB, over
+# GitHub's 100 MB limit). The generator self-exports on run, so commit only the
+# .py and regenerate the meshes locally.
+aerobar-crossbar/variant_d_foam.stl
+aerobar-crossbar/variant_d_foam.glb
+aerobar-crossbar/variant_d_foam.step
+
 # Bambu Lab LAN config — holds the printer access code, keep it local.
 bambu-printers.json
