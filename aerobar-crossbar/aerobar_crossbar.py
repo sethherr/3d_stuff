@@ -60,23 +60,21 @@ HEX_R = 16.0                          # one section the whole length (no step)
 HEX_FLAT = HEX_R * 3 ** 0.5 / 2       # ~13.86, half-height of the flats
 
 # Crystalline diamond windows that lighten the mid-span (cut through in Y).
-WIN_HALF_X = 10.0                     # half-length along the bar
+WIN_HALF_X = 8.0                      # half-length along the bar
 WIN_HALF_Z = 9.0                      # half-height (leaves top/bottom flanges)
 WIN_CX = 22.0                         # +/- mid-span window centers
 
-# Round inboard cutout next to each saddle (the tie's entry/return pocket). Round
-# -- not a diamond -- so the tie lies flat, like it does in the saddle cup.
-NEAR_CX = 36.0                        # +/- cutout centers
-NEAR_R = 8.0                          # cutout radius (cut through Y)
-
-# Zip-tie X-holes: a round tunnel runs in X through the top of each saddle into
-# the cup, and another through the bottom. Round walls so the tie lies flat. The
-# tie threads in via the round cutout, out the top tunnel over the bar's crown,
-# back the bottom tunnel, and cinches.
-XH_CX = 48.0                          # +/- tunnel center in X (NEAR cutout -> cup)
-XH_LEN = 24.0                         # length along X
-XH_R = 3.5                            # tunnel radius (tie cross-section + slack)
-XH_OFFZ = 7.0                         # +/- above/below center, near the cup edges
+# Zip-tie anchor: a *convex* ridge just inboard of each cup that the tie wraps --
+# same curvature as the bar in the saddle, so the tie lies flat. A pocket behind
+# the ridge gives the tie room to wrap it; two tunnels run out to the cup so the
+# tie passes over the bar's crown. Cinching pulls the bar against the cup.
+PKT_IN = 31.0                         # pocket inboard x (gives the tie room)
+RIDGE_CX = 43.0                       # ridge center x (pocket's outboard wall)
+RIDGE_R = 5.0                         # convex ridge radius (tie wraps this)
+PKT_HZ = 8.0                          # pocket half-height (z)
+TUN_R = 3.0                           # tunnel radius (tie cross-section)
+TUN_Z = 5.0                           # tunnel z offset (tangent to ridge top/bot)
+TUN_OUT = 60.0                        # tunnel reaches the cup/end
 
 # ---- GoPro 2-prong tab mount (male, underside) -----------------------------
 GP_FINGER_T = 3.0                     # finger thickness (X)
@@ -99,7 +97,8 @@ def _diamond_window(cx, hx, hz):
 def _body():
     # One uniform hexagonal bar, flat top/bottom, spanning bar center to center.
     bar_len = 2 * BAR_X
-    body = extrude(Plane.YZ * RegularPolygon(HEX_R, 6), amount=bar_len / 2, both=True)
+    env = extrude(Plane.YZ * RegularPolygon(HEX_R, 6), amount=bar_len / 2, both=True)
+    body = env
 
     # Lighten the mid-span with crystalline diamond windows (no step-down).
     for cx in (-WIN_CX, WIN_CX):
@@ -111,16 +110,21 @@ def _body():
         # cup opens toward the bar (+/-X) and seats against its inner surface.
         groove = Pos(cx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
         body = body - groove
-        # Round cutout just inboard of the saddle (the tie's entry/return pocket)
-        # -- rounded, not a diamond, so the tie lies flat against it.
-        body = body - Pos(sign * NEAR_CX, 0, 0) * (
-            Rot(90, 0, 0) * Cylinder(NEAR_R, 2 * HEX_R + 10)
+        # Pocket inboard of the cup -> room for the tie to wrap the ridge.
+        body = body - Pos(sign * (PKT_IN + RIDGE_CX) / 2, 0, 0) * Box(
+            abs(RIDGE_CX - PKT_IN), 2 * HEX_R + 10, 2 * PKT_HZ
         )
-        # Top & bottom round tunnels from that cutout into the cup, so the tie
-        # rides on rounded walls (like the saddle) instead of sharp edges.
-        for off in (XH_OFFZ, -XH_OFFZ):
-            body = body - Pos(sign * XH_CX, 0, off) * (
-                Rot(0, 90, 0) * Cylinder(XH_R, XH_LEN)
+        # Convex ridge on the pocket's outboard wall (added back): the tie wraps
+        # it like it wraps the bar -- same curvature -- so it lies flat. Clipped
+        # to the bar envelope so it can't poke out the sides.
+        ridge = Pos(sign * RIDGE_CX, 0, 0) * (
+            Rot(90, 0, 0) * Cylinder(RIDGE_R, 2 * HEX_R + 10)
+        )
+        body = body + (ridge & env)
+        # Two tunnels from the ridge top/bottom out to the cup over the bar.
+        for off in (TUN_Z, -TUN_Z):
+            body = body - Pos(sign * (RIDGE_CX + TUN_OUT) / 2, 0, off) * (
+                Rot(0, 90, 0) * Cylinder(TUN_R, abs(TUN_OUT - RIDGE_CX))
             )
     return body
 
