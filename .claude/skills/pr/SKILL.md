@@ -4,25 +4,25 @@ description: >-
   Create or update a pull request for the current branch. Trigger when the user
   asks to create/open/make a PR, or to edit/update/rewrite/fix the PR
   description, body, or summary — for both new PRs (`gh pr create`) and
-  existing ones (`gh pr edit --body-file`). For frontend diffs, delegates to
-  the `frontend-screenshots` skill to capture desktop+mobile screenshots and
-  embeds them under a `## Screenshots` section. Use for any verb that lands on
-  a PR's text content: "open a PR", "make a PR", "update the PR description",
-  "rewrite the PR body", "fix the description".
+  existing ones (`gh pr edit --body-file`). For CAD/geometry diffs, locates the
+  part's snapshot renders (`snap_<view>_*.png`) and embeds them under a
+  `## Snapshots` section via the `github-upload-image-to-pr` skill. Use for any
+  verb that lands on a PR's text content: "open a PR", "make a PR", "update the
+  PR description", "rewrite the PR body", "fix the description".
 allowed-tools: Bash, Read, Glob, Grep
 ---
 
 # Pull request workflow
 
-Create or update a pull request for the current branch. If the diff contains frontend changes, delegate screenshot capture to the `frontend-screenshots` skill and embed the results in the PR body under a `## Screenshots` section.
+Create or update a pull request for the current branch. This is a build123d CAD repo (Python parts managed by mise + uv; see the root `README.md`). If the diff changes geometry, embed the part's snapshot renders in the PR body under a `## Snapshots` section using the `github-upload-image-to-pr` skill.
 
-The workflow is ordered so the always-runs phase (steps 1–3) happens first, then the screenshot phase (steps 4–7) runs only when needed. Each step ends with the conditions under which you stop and return.
+The workflow is ordered so the always-runs phase (steps 1–3) happens first, then the snapshot phase (steps 4–7) runs only when the diff touches geometry. Each step ends with the conditions under which you stop and return.
 
 ## Workflow
 
 ### 1. Gather branch state
 
-Run `eval "$(ruby bin/env --export)"` once so `$WORKSPACE_ID`, `$DEV_PORT`, `$BASE_URL`, and `$REDIS_URL` are set from `.workspace_id` (when present). Then run in parallel:
+Run in parallel:
 - `git status` (no `-uall`)
 - `git diff main...HEAD --stat`
 - `git diff main...HEAD --name-only`
@@ -33,122 +33,78 @@ If the branch has no commits ahead of `main`, stop and tell the user.
 
 ### 2. Classify the diff
 
-A change is "frontend" if any changed path matches:
-- `app/views/**` (`.erb`, `.html.erb`)
-- `app/components/**` (ViewComponent templates or Ruby)
-- `app/javascript/**`
-- `app/assets/**`
-- `config/tailwind*`, `tailwind.config.*`, `postcss.config.*`
-- `*.scss`, `*.css`, `*.coffee`, `*.js`, `*.ts`
+A change is "CAD" if any changed path is a part script or exported geometry:
+- `**/*.py` (a build123d part — anything that builds geometry, e.g. `aerobar-crossbar/aerobar_crossbar.py`)
+- `**/*.step`, `**/*.stp`, `**/*.stl`, `**/*.glb`, `**/*.3mf`, `**/*.dxf`
 
-Record this as `FRONTEND=true|false` for the screenshot decision in step 4.
+Record this as `CAD=true|false` and note the set of **affected part directories** (the dirs containing the changed part scripts / exports) for the snapshot decision in step 4. A pure tooling/docs change (`README.md`, `pyproject.toml`, `mise.toml`, `uv.lock`, `.claude/**`) is `CAD=false`.
 
 ### 3. Build the summary body and create/update the PR
 
-Write a summary of the change (2–5 bullets based on the diff and recent commits) to a temp file. Follow the repo's existing PR body style — look at the last few merged PRs (`gh pr list --state merged --limit 5 --json body,title`) to match tone and length. Keep the title under ~70 chars.
+Write a summary of the change (2–5 bullets based on the diff and recent commits) to a temp file. Follow the repo's existing PR body style — look at the last few merged PRs (`gh pr list --state merged --limit 5 --json body,title`) to match tone and length. If there are none yet, keep it plain and factual. Keep the title under ~70 chars.
 
-**Bias toward brevity.** Reviewers skim. A bullet that fits on one line beats one that wraps three times — push detail down to the diff or commit log, not the body. If a per-file bullet starts feeling like an essay, compress to a single sentence naming the *kind* of change (e.g., "tightened description, trimmed unused allowed-tools, consolidated duplicated snippets") rather than enumerating each edit. Aim for under ~6 bullets total across the whole body, including any nested ones; if you're past that, regroup by category until you fit.
+**Bias toward brevity.** Reviewers skim. A bullet that fits on one line beats one that wraps three times — push detail down to the diff or commit log, not the body. If a per-file bullet starts feeling like an essay, compress to a single sentence naming the *kind* of change (e.g., "raised the bar to 40mm, filleted the clamp, re-exported STEP/STL/GLB") rather than enumerating each edit. Aim for under ~6 bullets total across the whole body, including any nested ones; if you're past that, regroup by category until you fit.
 
-**Describe the end state, not the journey.** Reviewers want to know what the PR does *now* — the diff that will land — not the order in which it was built. Avoid framings like "first pass" / "second pass", commit-hash references for stages of work that all merge into the same shipped diff, "originally we tried X then switched to Y", or play-by-play of how the conversation evolved. The git log preserves that. If a discarded approach is genuinely load-bearing context for the reviewer (e.g., explains why the chosen approach is structured oddly), one line is enough; otherwise omit. The same applies when *updating* an existing PR body: rewrite to describe the current diff, don't append a changelog of edits made since the last revision.
+**Describe the end state, not the journey.** Reviewers want to know what the PR does *now* — the diff that will land — not the order in which it was built. Avoid framings like "first pass" / "second pass", commit-hash references for stages of work that all merge into the same shipped diff, "originally we tried X then switched to Y", or play-by-play of how the conversation evolved. The git log preserves that. If a discarded approach is genuinely load-bearing context for the reviewer (e.g., explains why a dimension is what it is), one line is enough; otherwise omit. The same applies when *updating* an existing PR body: rewrite to describe the current diff, don't append a changelog of edits made since the last revision.
 
-**No "Test plan" section unless the user asks.** Don't list things CI already covers — `bundle exec rspec ...`, `bin/lint`, `bin/dev` boots cleanly, etc. Those belong to CI, not the PR body. Only add a Test plan when there's reviewer-facing manual verification a human needs to do (e.g. "click X, confirm Y appears"), and only when the user requests it.
+**No "Test plan" section unless the user asks.** Don't list routine regen/validation steps — `uv run python <part>.py`, re-exporting STEP/STL/GLB, opening the CAD Viewer, etc. Only add a Test plan when there's reviewer-facing manual verification a human needs to do (e.g. "confirm the clamp clears the 31.8mm bar"), and only when the user requests it.
 
 **No Claude Code attribution footer.** Don't append the "🤖 Generated with [Claude Code](https://claude.com/claude-code)" line (or any variant of it) to the body. The PR body should read like the human author wrote it.
 
-Push the branch: `git push -u origin HEAD`.
+Push the branch: `git push -u origin HEAD`. **Never force-push** (it's blocked by policy anyway) — if the push is rejected as non-fast-forward, stop and tell the user rather than rewriting history.
 
 - If `$EXISTING_PR` from step 1 was non-empty: `gh pr edit <num> --body-file <tmp-body-file>` (don't overwrite the title unless the user asks).
 - Otherwise: `gh pr create --base main --title "..." --body-file <tmp-body-file>`. Capture the PR number from the output.
 
 Always pass the body via `--body-file` (not inline `--body`) to preserve formatting.
 
-**Stop here and return the PR URL** unless step 4's gate says screenshots are needed.
+**Stop here and return the PR URL** unless step 4's gate says snapshots are needed.
 
-### 4. Decide whether screenshots are needed and which URLs to capture
+### 4. Decide whether snapshots are needed
 
-Only continue past this step when there's a real reason to capture. Otherwise return the PR URL.
+Only continue past this step when the diff changes geometry. Otherwise return the PR URL.
 
-- New PR + `FRONTEND=false` → done.
-- New PR + `FRONTEND=true` → continue; capture every affected page.
-- Existing PR + `FRONTEND=false` → done.
-- Existing PR + `FRONTEND=true` → continue only if the captures in the existing screenshots comment are stale: a commit since the last capture touched a page already screenshotted, or a new affected page now appears in the diff. Limit step 5 to those pages. If nothing has moved, done.
+- New PR + `CAD=false` → done.
+- New PR + `CAD=true` → continue; embed snapshots for every affected part directory.
+- Existing PR + `CAD=false` → done.
+- Existing PR + `CAD=true` → continue only if the snapshots in the existing `## Snapshots` section are stale: a commit since the last embed changed a part already shown, or a newly affected part appears in the diff. Limit step 5 to those parts. If nothing moved, done.
 
-From the changed files, infer the affected routes. Heuristics:
-- A view at `app/views/competitions/show.html.erb` → `/competitions/:id` (pick a representative id from the dev db, e.g. `Competition.last.id`)
-- A component touched by a specific page → screenshot that page
-- A shared component (header, footer, leaderboard punchcard, etc.) → screenshot 1–2 representative pages that exercise it
-- Admin views → `/admin/...`
-- If unclear, ask the user which URLs to capture before proceeding. Do not guess blindly — 1–3 well-chosen URLs beats 10 random ones.
+### 5. Locate the part snapshots
 
-### 5. Capture branch screenshots
+For each affected part directory, find the most recent snapshot set. Snapshots follow the convention `snap_<view>_<UTC-timestamp>.png` (views: `iso`, `front`, `right`, `top`), written next to the part by the CAD Viewer. Glob `<part-dir>/snap_*_*.png` and pick the newest timestamp group (the four views sharing the latest `…Z` stamp; a part may have fewer than four).
 
-Invoke the `frontend-screenshots` skill with the `(url-path, page-slug)` pairs from step 4. It handles dev-server check, sign-in, viewport sizing, and per-PNG sanity checks. It returns local paths under `tmp/pr_screenshots/<branch>-<page>-<timestamp>-{desktop,mobile}.png`.
+**If a changed part has no snapshots, or its newest snapshots predate the latest change to its `.py` / geometry**, they're missing or stale. Do **not** silently skip or post old renders — regenerate first via the `cad` / `cad-viewer` skills (which render the part and write fresh `snap_*` PNGs), then commit them and re-push. If you can't regenerate, tell the user which parts lack current snapshots and let them decide; don't post an out-of-date render as if it were current.
 
-If `frontend-screenshots` returns failures it couldn't diagnose, surface them and stop — don't post partial screenshots.
+Collect the chosen PNG paths keyed by `(part-dir, view)`.
 
-### 6. Upload branch screenshots and get inline URLs
+### 6. Upload snapshots and get inline URLs
 
-Invoke the `github-upload-image-to-pr` skill to upload each PNG from step 5 to the PR's comment textarea — GitHub mints persistent `user-attachments/assets/` URLs that render inline in the browser (release assets would force a download on click). The skill clears the textarea without submitting the comment.
+Invoke the `github-upload-image-to-pr` skill to upload each PNG from step 5 to the PR's comment textarea — GitHub mints persistent `user-attachments/assets/` URLs that render inline. The skill clears the textarea without submitting a comment.
 
-Collect the returned URLs, keyed by `(page-slug, viewport)`.
+Collect the returned URLs, keyed by `(part-dir, view)`.
 
-### 6.5 Capture and upload the same URLs on `main`
+### 7. Post the Snapshots section in the PR body
 
-Capture the **base-branch** version of every screenshot from step 5 so the section becomes a before/after comparison instead of "here's how it looks now." This is the default for every screenshot captured — if you reached step 5 at all, the diff is frontend, and the comparison is informative (a same-screenshot pair documents visual parity for a refactor; a different pair documents the actual visual change).
-
-Skip per-page only when the URL didn't exist on `main` (a brand-new route or page added in this PR) — there's nothing to compare to.
-
-Re-invoke `frontend-screenshots` with the same `(url-path, page-slug)` pairs and tell it to capture against `main` (its cross-branch step — git checkout dance, captures into `...-main-...` filenames, returns to the original branch). Then re-invoke `github-upload-image-to-pr` for those PNGs.
-
-### 7. Post the Screenshots section as the first PR comment
-
-Post the screenshots as a **PR comment**, not in the PR body. This keeps the description tight and skimmable — reviewers see the human-written summary first, with screenshots one scroll down. It also avoids re-editing the body (and its notification noise) every time screenshots are recaptured.
-
-On a fresh PR, this comment is naturally the first one. On an update, find the existing screenshots comment (the one authored by you whose body starts with `## Screenshots`) and edit it in place rather than posting a new one:
-
-```bash
-SCREENSHOT_COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{PR_NUMBER}/comments \
-  --jq '.[] | select(.body | startswith("## Screenshots")) | .id' | head -1)
-```
-
-- If `$SCREENSHOT_COMMENT_ID` is empty: `gh pr comment <num> --body-file <tmp-comment-file>`.
-- Otherwise: `gh api -X PATCH repos/{owner}/{repo}/issues/comments/$SCREENSHOT_COMMENT_ID -f body=@<tmp-comment-file>`.
-
-**Headers are always `| Desktop | Mobile |`** — that stays the same regardless of whether there's a main comparison. The main shots and branch shots stack as additional rows, with a small indicator row between them when both are present.
-
-Default (with main comparison):
+Embed the renders under a `## Snapshots` section in the PR body (one subsection per affected part). On an update, replace the existing `### <part-dir>` block for any part you recaptured and leave the others alone; if a `## Snapshots` section already exists, edit it in place rather than appending a duplicate.
 
 ```markdown
-## Screenshots
+## Snapshots
 
-### <url-path>
+### aerobar-crossbar
 
-| Desktop | Mobile |
-| --- | --- |
-| <img src="<main-desktop-url>" width="500"> | <img src="<main-mobile-url>" width="250"> |
-| main 👆 | this branch 👇 |
-| <img src="<branch-desktop-url>" width="500"> | <img src="<branch-mobile-url>" width="250"> |
-```
-
-Brand-new page (URL didn't exist on `main` — see step 6.5), no comparison row:
-
-```markdown
-### <url-path>
-
-| Desktop | Mobile |
-| --- | --- |
-| <img src="<branch-desktop-url>" width="500"> | <img src="<branch-mobile-url>" width="250"> |
+| Iso | Front | Right | Top |
+| --- | --- | --- | --- |
+| <img src="<iso-url>" width="320"> | <img src="<front-url>" width="320"> | <img src="<right-url>" width="320"> | <img src="<top-url>" width="320"> |
 ```
 
 Rules:
-- Each page gets a `### <url-path>` subheading (the literal path, e.g. `/`, `/competitions/2025`, `/admin/competition_users`) followed by its own table.
-- **Headers are always `| Desktop | Mobile |`** — never `| main | this branch |` or any per-PR variation. Reviewers should see the same column meaning across every PR.
-- Use `<img src=... width=...>` rather than `![]()` so the widths render predictably in GitHub's table cells. ~500 for desktop, ~250 for mobile fits a side-by-side cell layout cleanly.
+- Each affected part gets a `### <part-dir>` subheading followed by its own table.
+- Column headers are the view names (`Iso`, `Front`, `Right`, `Top`) — include only the views that exist for that part, in that order.
+- Use `<img src=... width=...>` (not `![]()`) so widths render predictably in GitHub table cells; ~320 reads well in a four-up row.
 
-When updating an existing screenshots comment, replace the existing `### <url-path>` block for any page you recaptured; leave other pages' blocks alone.
-
-Return the PR URL.
+Update the body with `gh pr edit <num> --body-file <tmp-body-file>` (regenerate the full body so the section lands in place). Return the PR URL.
 
 ## Notes
 
-- If `frontend-screenshots` or `github-upload-image-to-pr` fails, report the failure clearly and leave the PR without screenshots — don't block PR creation on screenshot tooling.
+- If `github-upload-image-to-pr` fails, report the failure clearly and leave the PR without snapshots — don't block PR creation on the image tooling.
+- Never force-push from this skill. If history has diverged, surface it and let the user resolve it.
