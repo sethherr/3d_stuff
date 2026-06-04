@@ -152,7 +152,7 @@ def _front_fairing():
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
-               label="lattice", strict_bounds=False, fairing=False, trim_back_top=False):
+               label="lattice", strict_bounds=False, fairing=False, trim_back_corners=False):
     """Tile `base_nodes` (positions within one `cell`-sized cube) on a cubic grid,
     connect each node to existing neighbours at `neighbor_offsets`, and assemble
     the struts + nodes + end cradles + GoPro hub into one Compound.
@@ -172,8 +172,8 @@ def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
         origin = (i * cell, j * cell, k * cell)
         for bn in base_nodes:
             p = (origin[0] + bn[0], origin[1] + bn[1], origin[2] + bn[2])
-            # Drop the back-top corner row of nodes (and their struts) if asked.
-            if trim_back_top and p[1] > Y_R - 1.5 and p[2] > Z_R - 1.5:
+            # Drop the back-top and back-bottom corner rows (and their struts).
+            if trim_back_corners and p[1] > Y_R - 1.5 and abs(p[2]) > Z_R - 1.5:
                 continue
             nodes[(round(p[0], 2), round(p[1], 2), round(p[2], 2))] = p
 
