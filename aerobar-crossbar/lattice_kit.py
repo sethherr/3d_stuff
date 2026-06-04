@@ -96,7 +96,8 @@ def _tie_ramp(sign, top):
 
 def _cradle(sign):
     """Thin C-shaped cup shell hugging the inner half of the bar, with a tapered
-    zip-tie channel cut into its top and bottom edges."""
+    zip-tie channel cut into its top and bottom edges. The rear (+Y) is flattened
+    to a single plane at the lattice back edge instead of the hex's rear point."""
     bx = sign * BAR_X
     big = 2 * HEX_R + 6
     ring = Pos(bx, 0, 0) * (
@@ -106,7 +107,10 @@ def _cradle(sign):
     env = Pos(bx - 8 * sign, 0, 0) * extrude(
         Plane.YZ * RegularPolygon(HEX_R, 6), amount=8, both=True
     )
-    return (ring & env) - _tie_ramp(sign, True) - _tie_ramp(sign, False)
+    cradle = (ring & env) - _tie_ramp(sign, True) - _tie_ramp(sign, False)
+    # Flatten the rear to a single plane level with the lattice's back edge.
+    cradle = cradle - Pos(0, Y_R + 50, 0) * Box(400, 100, 400)
+    return cradle
 
 
 def _center_hub():
