@@ -68,3 +68,31 @@ http://127.0.0.1:4178/?dir=/absolute/path/to/<part>&file=<part>.step
 
 Swap `file=` for `.<part>.step.glb` or `<part>.stl` to load the lighter
 tessellated mesh. The server self-stops after 12h (`--shutdown-after`).
+
+## 3D printing (Bambu Lab)
+
+Parts export a print-ready `.stl` (the `.glb` is viewer-only). The path from
+part to print uses two plugin skills:
+
+1. **Slice** the mesh to plain `.gcode` with the `cad:gcode` skill — it drives a
+   real slicer CLI (OrcaSlicer; `brew install --cask orcaslicer` on macOS) and
+   statically validates the output. Slicing needs a printer/profile JSON.
+2. **Print** over LAN with the `cad:bambu-labs` skill, which uploads the
+   validated `.gcode` via FTPS and starts the job via MQTT.
+
+The printer must be in **LAN Only + Developer Mode** (set on its touchscreen
+under network settings). Store its IP, access code, and model in a
+`bambu-printers.json` at the repo root — this is **git-ignored** because it
+holds the LAN access code:
+
+```json
+{
+  "printers": {
+    "a1-mini": { "host": "192.168.1.34", "access_code": "12345678", "model": "a1-mini" }
+  }
+}
+```
+
+`cad:bambu-labs` defaults to **dry-run** — real printer traffic requires
+`--execute`, and starting a print requires `--execute --confirm-start-print`.
+Check the build plate, filament, and nozzle before a live start.
