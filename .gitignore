@@ -5,5 +5,8 @@ __pycache__/
 # CAD Viewer's hidden topology cache sidecars (regenerated on render)
 .*.step.glb
 
+# Playwright MCP working dir (browser profile, snapshots, scratch uploads)
+.playwright-mcp/
+
 # Bambu Lab LAN config — holds the printer access code, keep it local.
 bambu-printers.json
