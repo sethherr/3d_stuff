@@ -72,8 +72,9 @@ PKT_IN = 31.0                         # pocket inboard x (gives the tie room)
 RIDGE_CX = 43.0                       # ridge center x (pocket's outboard wall)
 RIDGE_R = 5.0                         # convex ridge radius (tie wraps this)
 PKT_HZ = 8.0                          # pocket half-height (z)
-TUN_R = 3.0                           # tunnel radius (tie cross-section)
-TUN_Z = 5.0                           # tunnel z offset (tangent to ridge top/bot)
+TUN_W = 6.5                           # tunnel width (Y) = tie width + slack
+TUN_H = 3.0                           # tunnel height (Z); rectangular so the flat
+TUN_Z = 5.0                           # tie lies flat. z offset (tangent to ridge)
 TUN_OUT = 60.0                        # tunnel reaches the cup/end
 
 # ---- GoPro 2-prong tab mount (male, underside) -----------------------------
@@ -121,10 +122,11 @@ def _body():
             Rot(90, 0, 0) * Cylinder(RIDGE_R, 2 * HEX_R + 10)
         )
         body = body + (ridge & env)
-        # Two tunnels from the ridge top/bottom out to the cup over the bar.
+        # Two rectangular tunnels from the ridge top/bottom out to the cup over
+        # the bar -- rectangular (not round) so the flat zip tie lies flat.
         for off in (TUN_Z, -TUN_Z):
-            body = body - Pos(sign * (RIDGE_CX + TUN_OUT) / 2, 0, off) * (
-                Rot(0, 90, 0) * Cylinder(TUN_R, abs(TUN_OUT - RIDGE_CX))
+            body = body - Pos(sign * (RIDGE_CX + TUN_OUT) / 2, 0, off) * Box(
+                abs(TUN_OUT - RIDGE_CX), TUN_W, TUN_H
             )
     return body
 
