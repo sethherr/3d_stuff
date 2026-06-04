@@ -4,18 +4,19 @@ Nests in the gap *between* two round aerobar extensions and carries a
 GoPro-mounted light underneath, like a tri/TT cockpit crossbar.
 
 Form: one uniform faceted (hexagonal) bar the whole length -- no step between
-ends and middle. The mid-span is lightened with crystalline diamond windows cut
-straight through, rather than by thinning the section. Flat top/bottom faces
-print cleanly on FDM; the diamond windows are point-up so they self-support.
-The saddle cups stay circular so they mate the round bars.
+ends and middle. Two crystalline diamond windows cut straight through the
+mid-span lighten it (front-to-back, Y), and a diamond zip-tie cutout sits behind
+each saddle (top-to-bottom, Z) so the tie language matches the windows. Flat
+top/bottom faces print cleanly on FDM; the diamonds are point-up so they
+self-support. The saddle cups stay circular so they mate the round bars.
 
 - Bars: 22.2 mm OD, 120 mm center-to-center.
 - The body sits between the bars. Each end is a semicircular saddle that opens
   *outward* (+/-X) and mates the inner half of the bar; the bar's outer half
   stays exposed for the tie to wrap.
-- Each bar is secured with one zip tie: a vertical through-slot behind each
-  saddle lets a tie pass through and wrap the bar's exposed outer half, cinching
-  the bar into the saddle.
+- Each bar is secured with one zip tie: a vertical diamond cutout behind each
+  saddle lets a tie pass through (top-to-bottom) and wrap the bar's exposed
+  outer half, cinching the bar into the saddle.
 - Bottom center: GoPro 2-prong tab mount (3 mm fingers, 5 mm pin hole) for a
   light; hole axis is left-right so the light tilts up/down to aim.
 
@@ -59,11 +60,12 @@ WIN_HALF_X = 15.0                     # half-length along the bar
 WIN_HALF_Z = 9.0                      # half-height (leaves top/bottom flanges)
 WIN_CX = 22.0                         # +/- window centers, clear of GoPro & slots
 
-# Zip-tie vertical slot: one tie per side threads through and wraps the bar's
-# outer half. Centered on the bar (y = 0).
-TIE_SLOT_X = 3.0
-TIE_SLOT_Y = 6.0
-TIE_SLOT_OFFX = 16.0                  # inboard of each bar center, behind the cup
+# Zip-tie cutout: one diamond per side, cut top-to-bottom (Z) behind each saddle
+# so a tie threads through and wraps the bar's outer half. Diamond to match the
+# windows; sized to pass a tie and sit within the top/bottom flats.
+TIE_HALF_X = 3.5                      # half-width across the bar
+TIE_HALF_Y = 6.5                      # half-length along the bar axis
+TIE_OFFX = 18.0                       # inboard of each bar center, behind the cup
 
 # ---- GoPro 2-prong tab mount (male, underside) -----------------------------
 GP_FINGER_T = 3.0                     # finger thickness (X)
@@ -76,13 +78,11 @@ GP_TOP_Z = -11.0                      # rooted up into the bar
 GP_ROUND_Z = -28.0                    # rounded tip center / pin-hole center
 
 
-def _diamond_window(cx):
-    """A point-up diamond prism through Y (self-supporting window when printed)."""
-    profile = Plane.XZ * Polygon(
-        (-WIN_HALF_X, 0), (0, WIN_HALF_Z), (WIN_HALF_X, 0), (0, -WIN_HALF_Z)
-    )
-    win = extrude(profile, amount=HEX_R + 5, both=True)  # all the way through Y
-    return Pos(cx, 0, 0) * win
+def _diamond_prism(plane, ha, hb, length):
+    """A point-up diamond, ``ha`` half-wide and ``hb`` half-tall in ``plane``,
+    extruded ``length`` along that plane's normal (centered)."""
+    profile = plane * Polygon((-ha, 0), (0, hb), (ha, 0), (0, -hb))
+    return extrude(profile, amount=length / 2, both=True)
 
 
 def _body():
@@ -90,9 +90,10 @@ def _body():
     bar_len = 2 * BAR_X
     body = extrude(Plane.YZ * RegularPolygon(HEX_R, 6), amount=bar_len / 2, both=True)
 
-    # Lighten the mid-span with crystalline diamond windows (no step-down).
+    # Lighten the mid-span with crystalline diamond windows through Y (no step).
     for cx in (-WIN_CX, WIN_CX):
-        body = body - _diamond_window(cx)
+        win = _diamond_prism(Plane.XZ, WIN_HALF_X, WIN_HALF_Z, 2 * HEX_R + 10)
+        body = body - Pos(cx, 0, 0) * win
 
     for sign in (-1, 1):
         cx = sign * BAR_X
@@ -100,12 +101,10 @@ def _body():
         # cup opens toward the bar (+/-X) and seats against its inner surface.
         groove = Pos(cx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
         body = body - groove
-        # Zip-tie slot behind the saddle: one vertical through-hole so a tie can
-        # pass through and wrap the bar's exposed outer half.
-        slot = Pos(cx - sign * TIE_SLOT_OFFX, 0, 0) * Box(
-            TIE_SLOT_X, TIE_SLOT_Y, 2 * HEX_R + 6
-        )
-        body = body - slot
+        # Zip-tie diamond cutout behind the saddle, through Z, so a tie threads
+        # top-to-bottom and wraps the bar's exposed outer half.
+        tie = _diamond_prism(Plane.XY, TIE_HALF_X, TIE_HALF_Y, 2 * HEX_R + 6)
+        body = body - Pos(cx - sign * TIE_OFFX, 0, 0) * tie
     return body
 
 
