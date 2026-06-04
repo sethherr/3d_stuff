@@ -8,7 +8,10 @@ uv = "latest"
 
 [env]
 # uv creates/manages .venv; mise auto-activates it so `python` resolves to it.
-_.python.venv = { path = ".venv", create = true, uv_create_args = ["--python", "3.12.13"] }
+# mise already passes `--python` (from the [tools] python above) when it creates
+# the venv, so do NOT add another `--python` via uv_create_args — uv rejects the
+# duplicate flag ("--python cannot be used multiple times") and venv creation fails.
+_.python.venv = { path = ".venv", create = true }
 
 [tasks.setup]
 description = "Install CAD Python deps + Playwright Chromium (for snapshots)"
