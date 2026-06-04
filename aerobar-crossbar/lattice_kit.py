@@ -47,6 +47,8 @@ Y_R = 12.0             # lattice half-extent in Y (within the hex flats)
 Z_R = 12.0             # lattice half-extent in Z
 SHELL_WALL = 2.4       # cradle cup wall thickness (the only solid at the ends)
 SEAT_CLEAR = 0.4       # keep struts this far clear of each bar's seat
+TIE_W = TIE_SLOT_Y     # zip-tie channel width (matches the tie slot)
+TIE_DEPTH = 1.4        # recess so the tie sits flush with the rest of the saddle
 
 
 def _strut(p0, p1, r):
@@ -70,8 +72,19 @@ def _excluded(p):
     return False
 
 
+def _tie_channel(bx):
+    """A shallow groove across the cradle (centered in Y) so the zip tie wrapping
+    the bar sits recessed -- flush with the rest of the saddle, not proud."""
+    big = 2 * HEX_R + 6
+    reach = GROOVE_R + SHELL_WALL + 2
+    slab = Pos(bx, 0, 0) * Box(2 * reach, TIE_W, 2 * reach)
+    keep = Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R + SHELL_WALL - TIE_DEPTH, big))
+    return slab - keep
+
+
 def _cradle(sign):
-    """Thin C-shaped cup shell hugging the inner half of the bar."""
+    """Thin C-shaped cup shell hugging the inner half of the bar, with a flush
+    zip-tie channel grooved across its top and bottom."""
     bx = sign * BAR_X
     big = 2 * HEX_R + 6
     ring = Pos(bx, 0, 0) * (
@@ -81,7 +94,7 @@ def _cradle(sign):
     env = Pos(bx - 8 * sign, 0, 0) * extrude(
         Plane.YZ * RegularPolygon(HEX_R, 6), amount=8, both=True
     )
-    return ring & env
+    return (ring & env) - _tie_channel(bx)
 
 
 def _center_hub():
