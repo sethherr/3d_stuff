@@ -10,7 +10,23 @@ mise run setup      # uv sync (deps) + Playwright Chromium for snapshots
 ```
 
 `mise` auto-activates the uv-managed `.venv` when you `cd` into the project, so
-`python` and `uv run` resolve to it.
+`python` and `uv run` resolve to it. The first `cd` in creates `.venv`; the two
+commands above install the toolchain and the dependencies. That's the whole
+setup — no manual `uv venv` / `source .venv/bin/activate` dance.
+
+### Conductor workspaces
+
+`conductor.json` runs `bin/conductor-setup` automatically when a workspace is
+created, so a new workspace is ready with no manual steps. Instead of building a
+fresh `.venv` per workspace, it points `.venv` at a **shared venv cached by
+`uv.lock` hash** (`~/.cache/seth-3d/venvs/<hash>`), so parallel workspaces on the
+same lockfile reuse one build of the heavy build123d/OCP/vtk stack.
+
+- `.venv` is a symlink in Conductor workspaces; `python` / `uv run` work through
+  it normally.
+- **Changed dependencies?** The new `uv.lock` hashes to a fresh cache dir — re-run
+  `bash bin/conductor-setup` to rebuild and relink. For a private, non-shared
+  venv instead, `rm .venv && mise run setup` (mise then creates a local `.venv`).
 
 ## Toolchain notes
 

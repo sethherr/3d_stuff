@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Conductor workspace setup — runs once (non-interactive zsh) from the workspace
+# root when a workspace is created, via `scripts.setup` in conductor.json.
+#
+# It bootstraps the mise + uv toolchain and points this workspace's `.venv` at a
+# shared, lockfile-keyed cached venv, so parallel Conductor workspaces don't each
+# rebuild the heavy build123d/OCP/vtk stack. Same `uv.lock` -> same shared venv
+# (reused); change a dependency and the new lock hashes to a fresh dir.
+#
+# Plain (non-Conductor) clones don't need this — `mise install && mise run setup`
+# builds a normal local `.venv`. See README "Setup".
+set -euo pipefail
+
+# Conductor uses a non-interactive shell, so mise's `cd` hook hasn't run and the
+# shims may not be on PATH. Resolve the binary directly.
+MISE="$(command -v mise || true)"
+if [ -z "$MISE" ] && [ -x /opt/homebrew/bin/mise ]; then MISE=/opt/homebrew/bin/mise; fi
+if [ -z "$MISE" ]; then
+  echo "conductor-setup: mise not found — install it from https://mise.jdx.dev" >&2
+  exit 1
+fi
+
+# Trust this repo's mise.toml and install the pinned toolchain (Python + uv).
+"$MISE" trust >/dev/null
+"$MISE" install
+
+UV="$("$MISE" which uv)"
+PYBIN="$("$MISE" which python)"
+
+# Shared venv keyed by the lockfile.
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/seth-3d/venvs"
+HASH="$(shasum -a 256 uv.lock | cut -c1-12)"
+SHARED="$CACHE/$HASH"
+
+if [ ! -x "$SHARED/bin/python" ]; then
+  echo "conductor-setup: building shared venv -> $SHARED"
+  mkdir -p "$CACHE"
+  "$UV" venv --python "$PYBIN" "$SHARED"
+  VIRTUAL_ENV="$SHARED" "$UV" sync --frozen --active
+  VIRTUAL_ENV="$SHARED" "$UV" run --active playwright install chromium
+else
+  echo "conductor-setup: reusing shared venv -> $SHARED"
+fi
+
+# Point this workspace's .venv at the shared one. mise's `create = true` won't
+# recreate an existing path, and uv/python resolve through the symlink fine.
+rm -rf .venv
+ln -sfn "$SHARED" .venv
+echo "conductor-setup: linked .venv -> $SHARED"
