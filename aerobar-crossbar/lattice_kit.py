@@ -20,17 +20,19 @@ from build123d import (
     Compound,
     Cylinder,
     Plane,
-    Polygon,
     Pos,
+    Rectangle,
     RegularPolygon,
     Rot,
     Solid,
     Sphere,
     Vector,
+    Vertex,
     export_gltf,
     export_step,
     export_stl,
     extrude,
+    loft,
 )
 
 from aerobar_crossbar import (
@@ -110,24 +112,19 @@ def _center_hub():
 
 
 # ---- Aero nose fairing ------------------------------------------------------
-# A faceted wedge prow on the FRONT (-Y) face: constant full height the whole
-# width, flat angled side faces (not rounded), coming to a vertical point at the
-# front center. Front = -Y (direction of travel).
-FAIR_HALF_SPAN = 50.0                 # fairing runs |x| <= this (clears the saddles)
-FAIR_NOSE = 13.0                      # how far forward of the body the point reaches
-FAIR_BACK = 9.0                       # how far it laps back into the lattice
-FAIR_H = HEX_R * 3 ** 0.5 / 2         # half-height = the hex flat (flush w/ the bar)
+# A pyramid prow on the FRONT (-Y) face: its base is the full-height rectangle on
+# the front faces of the two saddle horns (@cad refs f2035/f2036/f2051/f2052),
+# and it tapers forward to a single point. Front = -Y (direction of travel).
+FAIR_HALF_SPAN = 53.1                 # base half-width = the saddle-horn front faces
+FAIR_FRONT_Y = -12.016                # base plane = those front faces
+FAIR_H = HEX_R * 3 ** 0.5 / 2         # base half-height = the hex flat (full height)
+FAIR_NOSE = 22.0                      # how far forward the point reaches
 
 
 def _front_fairing():
-    front = -Y_R                      # the lattice's leading (-Y) face
-    yf = front - FAIR_NOSE            # the point, at the front center
-    yb = front + FAIR_BACK            # the base, lapped back into the lattice
-    # Plan-view triangle (apex forward at x=0), extruded to constant height in Z.
-    tri = Plane.XY * Polygon(
-        (-FAIR_HALF_SPAN, yb), (FAIR_HALF_SPAN, yb), (0, yf)
-    )
-    return extrude(tri, amount=FAIR_H, both=True)
+    base = Pos(0, FAIR_FRONT_Y, 0) * (Plane.XZ * Rectangle(2 * FAIR_HALF_SPAN, 2 * FAIR_H))
+    apex = Vertex(0, FAIR_FRONT_Y - FAIR_NOSE, 0)
+    return loft([base, apex])
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
