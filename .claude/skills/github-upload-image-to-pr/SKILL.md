@@ -7,7 +7,7 @@ description: >-
   attach, embed, add, put, post, drop, show, document. Also covers visually documenting test runs,
   bug repros, UI states, or CI failures on an existing PR. The `gh` CLI cannot upload images;
   this skill drives a real browser to GitHub's user-attachments uploader.
-allowed-tools: Bash(gh:*), Bash(cp:*), ToolSearch, Read
+allowed-tools: Bash(gh:*), Bash(cp:*), Bash(mkdir:*), Bash(rm:*), ToolSearch, Read
 ---
 
 # Upload Image to PR
@@ -29,12 +29,18 @@ gh pr view --json number,url -q '"\(.number) \(.url)"'
 
 If multiple repos or branches are involved, confirm with the user which PR to target.
 
-Also, normalize the image paths to absolute paths. If a path contains special characters (e.g., Unicode narrow spaces from CleanShot X), copy the file to `/tmp/` first:
+Also, normalize the image paths to absolute paths, then **stage every image inside the current workspace** before uploading. The Playwright MCP confines `browser_file_upload` to its allowed roots (the workspace directory) — a path anywhere else (e.g. `/tmp/`, a sibling worktree, `~/Desktop`) is rejected with `File access denied: ... is outside allowed roots`. Staging into the workspace also handles paths with special characters (e.g. Unicode narrow spaces from CleanShot X).
+
+Copy each image into a gitignored scratch dir under the workspace and use those copies for the upload:
 
 ```bash
-# e.g., to handle glob-matched paths with special chars
-cp /path/to/CleanShot*keyword*.png /tmp/screenshot.png
+# Run from the workspace root. .playwright-mcp/ is already gitignored.
+mkdir -p .playwright-mcp/uploads
+cp /tmp/screenshot.png .playwright-mcp/uploads/                 # plain copy
+cp /path/to/CleanShot*keyword*.png .playwright-mcp/uploads/shot.png   # glob with special chars
 ```
+
+Pass the **absolute** path to each staged copy (e.g. `"$PWD/.playwright-mcp/uploads/shot.png"`) to `browser_file_upload` in Step 5. If `.playwright-mcp/` is not gitignored in this repo, stage under any other gitignored dir inside the workspace instead. Remove the scratch dir once Step 9 confirms the images render.
 
 ## Step 2: Verify Playwright MCP is available
 
@@ -97,7 +103,7 @@ Upload each image with `browser_file_upload` (takes the element ref and a file p
 
 For multiple images, upload them all to the same comment textarea before extracting URLs — this is more efficient than navigating between uploads.
 
-**Important:** Always use absolute file paths.
+**Important:** Always use absolute file paths, and only paths to the staged copies **inside the workspace** from Step 1. A path outside the MCP's allowed roots fails with `File access denied: ... is outside allowed roots` — if you hit that, the image wasn't staged into the workspace; copy it in (Step 1) and retry. The file chooser stays open after a denied upload, so you can re-call `browser_file_upload` with the corrected path without re-clicking the button.
 
 ## Step 6: Retrieve uploaded image URLs
 
@@ -138,25 +144,35 @@ Use the **standard textarea selector** from step 6, then assign `ta.value = ""`:
 
 ## Step 8: Embed images in the PR
 
-In both options below, substitute whichever form (markdown `![](...)` or HTML `<img ...>`) GitHub returned in step 6 — preserve it verbatim instead of rewrapping.
+Substitute whichever form (markdown `![](...)` or HTML `<img ...>`) GitHub returned in step 6 — preserve it verbatim instead of rewrapping.
 
-**Option A — Update PR description** (append images to existing body):
+**Post as a comment** (the default). A comment keeps the description tight and skimmable, and avoids re-editing the body (and its notification noise) on every recapture.
+
+If a screenshots comment already exists (one **you** authored whose body starts with `## Screenshots`), edit it in place instead of posting a new one. Filter on the author too — otherwise a `## Screenshots` comment from someone else would get clobbered:
+```bash
+ME=$(gh api user --jq .login)
+SCREENSHOT_COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{PR_NUMBER}/comments \
+  --jq ".[] | select(.user.login == \"$ME\" and (.body | startswith(\"## Screenshots\"))) | .id" | head -1)
+```
+
+Write the comment body to a temp file:
+```
+## Screenshots
+
+<image markup from step 6>
+```
+
+- If `$SCREENSHOT_COMMENT_ID` is empty: `gh pr comment {PR_NUMBER} --body-file <tmp-comment-file>`.
+- Otherwise: `gh api -X PATCH repos/{owner}/{repo}/issues/comments/$SCREENSHOT_COMMENT_ID -F body=@<tmp-comment-file>` (use `-F`, not `-f` — only `-F/--field` expands `@<path>` to the file's contents; `-f` would set the body to the literal string `@<tmp-comment-file>`).
+
+Only edit the PR description instead when the user explicitly asks for it:
 ```bash
 EXISTING_BODY=$(gh pr view {PR_NUMBER} --json body -q .body)
 
 gh pr edit {PR_NUMBER} --body "$(printf '%s\n\n## Screenshots\n\n%s' "$EXISTING_BODY" "<image markup from step 6>")"
 ```
 
-If `$EXISTING_BODY` already contains a `## Screenshots` heading (e.g., on re-runs), this will create a duplicate section. Check first with `grep -q "^## Screenshots" <<< "$EXISTING_BODY"` and either replace the existing section or post as a comment (Option B) instead.
-
-**Option B — Post as a new comment**:
-```bash
-gh pr comment {PR_NUMBER} --body "## Screenshots
-
-<image markup from step 6>"
-```
-
-Use Option A by default unless the user explicitly asks for a comment, or if the PR description is already long and a comment would be cleaner.
+If `$EXISTING_BODY` already contains a `## Screenshots` heading (e.g., on re-runs), this will create a duplicate section. Check first with `grep -q "^## Screenshots" <<< "$EXISTING_BODY"` and either replace the existing section or post as a comment instead.
 
 ## Step 9: Verify the result
 
@@ -172,8 +188,9 @@ Reload the page in the Playwright browser and take a screenshot to confirm the i
 | Issue | Solution |
 |-------|----------|
 | Not logged in | SSO screen may appear — take snapshot, find "Continue" button, click it |
-| File path with special characters (e.g., Unicode narrow spaces from CleanShot) | Copy file to `/tmp/` with a simple name: `cp /path/CleanShot*keyword*.png /tmp/screenshot.png` |
-| File upload fails | Ensure the file path is absolute |
+| `File access denied: ... is outside allowed roots` | The image lives outside the workspace. Stage it inside: `mkdir -p .playwright-mcp/uploads && cp <img> .playwright-mcp/uploads/`, then upload the staged copy (Step 1). |
+| File path with special characters (e.g., Unicode narrow spaces from CleanShot) | Copy into the workspace scratch dir with a simple name: `cp /path/CleanShot*keyword*.png .playwright-mcp/uploads/screenshot.png` |
+| File upload fails | Ensure the file path is absolute and inside the workspace |
 | Textarea doesn't contain URLs yet | Wait 3–5 seconds after upload before running JS eval; retry once if needed |
 | Textarea selector not found | GitHub UI changes occasionally — use the multi-selector JS in Step 4 to find the current element |
 | Playwright MCP not registered | `claude mcp add playwright -- npx -y @playwright/mcp@latest`, then restart the Claude Code session |

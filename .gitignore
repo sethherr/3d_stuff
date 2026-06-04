@@ -1,4 +1,7 @@
-.venv/
+# Local virtualenv — a real dir for plain clones, a symlink to the shared cached
+# venv in Conductor workspaces (bin/conductor-setup). No trailing slash so the
+# symlink form is ignored too.
+.venv
 __pycache__/
 *.pyc
 
@@ -7,6 +10,16 @@ __pycache__/
 
 # Playwright MCP working dir (browser profile, snapshots, scratch uploads)
 .playwright-mcp/
+
+# Strut-lattice exports are huge (1000s of separate solids -> 100+ MB STL/GLB,
+# over GitHub's 100 MB limit). The generators self-export on run, so commit only
+# the .py and regenerate the meshes locally.
+aerobar-crossbar/aerobar_crossbar_foam.stl
+aerobar-crossbar/aerobar_crossbar_foam.glb
+aerobar-crossbar/aerobar_crossbar_foam.step
+aerobar-crossbar/lattice_*.stl
+aerobar-crossbar/lattice_*.glb
+aerobar-crossbar/lattice_*.step
 
 # Bambu Lab LAN config — holds the printer access code, keep it local.
 bambu-printers.json
