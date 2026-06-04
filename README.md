@@ -47,6 +47,8 @@ bin/cad step <part>/<part>.py     # (generators self-export, so rarely needed)
 
 ## CAD Viewer
 
+The CAD skills (`cad:*`) and `bin/cad` come from the [`cad@text-to-cad`](https://github.com/earthtojake/text-to-cad) Claude Code plugin, declared in `.claude/settings.json` so it installs on clone (Claude Code prompts to trust the marketplace on first use).
+
 Use the `cad:cad-viewer` skill (in Claude Code: `/cad:cad-viewer <part>/<part>.step`) — it starts/reuses the local viewer server and hands back a ready-to-open link.
 
 To start the server directly instead, run its `backend/server.mjs` from the
