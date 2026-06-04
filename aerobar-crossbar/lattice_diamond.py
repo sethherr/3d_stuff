@@ -23,7 +23,7 @@ OFFSETS = [(sx * Q, sy * Q, sz * Q)
 
 def gen_step():
     return build_part(NODES, OFFSETS, CELL, strut_r=0.85, node_r=1.2,
-                      label="aerobar_crossbar_diamond", fairing=True)
+                      label="aerobar_crossbar_diamond", fairing=True, trim_back_top=True)
 
 
 if __name__ == "__main__":
