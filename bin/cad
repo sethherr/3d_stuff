@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Thin wrapper around the text-to-cad CAD skill launchers so we don't have to
+# hard-code the versioned plugin path. Usage:
+#   bin/cad snapshot --input part.step --output out.png --camera iso
+#   bin/cad inspect refs --facts part.step
+#   bin/cad step generator.py            # (generators self-export, so rarely needed)
+set -euo pipefail
+
+tool="${1:?usage: bin/cad <snapshot|inspect|step|dxf> [args...]}"
+shift
+
+cache="${HOME}/.claude/plugins/cache/text-to-cad"
+launcher="$(find "$cache" -path "*/skills/cad/scripts/${tool}" 2>/dev/null | sort -V | tail -1 || true)"
+if [[ -z "${launcher}" ]]; then
+  echo "bin/cad: could not find CAD skill launcher '${tool}' under ${cache}" >&2
+  exit 1
+fi
+
+exec python "${launcher}" "$@"

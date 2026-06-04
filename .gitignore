@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Bambu Lab LAN config — holds the printer access code, keep it local.
+bambu-printers.json
