@@ -19,6 +19,7 @@ from build123d import (
     Box,
     Compound,
     Cylinder,
+    Ellipse,
     Plane,
     Pos,
     RegularPolygon,
@@ -30,6 +31,7 @@ from build123d import (
     export_step,
     export_stl,
     extrude,
+    loft,
 )
 
 from aerobar_crossbar import (
@@ -108,8 +110,39 @@ def _center_hub():
     return Pos(0, 0, -10.5) * Box(14, 15, 6)
 
 
+# ---- Aero nose fairing ------------------------------------------------------
+# A streamlined solid nose on the FRONT (-Y) face: a teardrop lofted along the
+# span that tapers to a leading edge, taller and pushed further forward at the
+# center than at the ends (a swept-forward prow). Front = -Y (direction of travel).
+FAIR_HALF_SPAN = 50.0    # fairing runs |x| <= this (blends out before the saddles)
+FAIR_NOSE_C = 13.0       # how far forward of the body the LE reaches at center
+FAIR_NOSE_E = 3.0        # ...and at the ends
+FAIR_BACK = 9.0          # how far the fairing laps back into the lattice
+FAIR_H_C = 11.5          # half-height at center
+FAIR_H_E = 5.0           # half-height at the ends
+FAIR_STATIONS = 15
+
+
+def _front_fairing():
+    front = -Y_R                          # the lattice's leading (-Y) face
+    profiles = []
+    for i in range(FAIR_STATIONS):
+        t = i / (FAIR_STATIONS - 1)
+        x = -FAIR_HALF_SPAN + 2 * FAIR_HALF_SPAN * t
+        f = 1 - (2 * t - 1) ** 2          # 1 at center -> 0 at the ends
+        nose = FAIR_NOSE_E + (FAIR_NOSE_C - FAIR_NOSE_E) * f
+        h = FAIR_H_E + (FAIR_H_C - FAIR_H_E) * f
+        le = front - nose                 # leading edge (most forward)
+        back = front + FAIR_BACK          # laps back into the lattice
+        yc = (le + back) / 2
+        a = (back - le) / 2               # Y semi-axis
+        # Ellipse in the Y-Z plane at this station -> teardrop pointing forward.
+        profiles.append(Pos(x, yc, 0) * (Plane.YZ * Ellipse(a, h)))
+    return loft(profiles)
+
+
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
-               label="lattice", strict_bounds=False):
+               label="lattice", strict_bounds=False, fairing=False):
     """Tile `base_nodes` (positions within one `cell`-sized cube) on a cubic grid,
     connect each node to existing neighbours at `neighbor_offsets`, and assemble
     the struts + nodes + end cradles + GoPro hub into one Compound.
@@ -153,6 +186,8 @@ def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
                     parts.append(Pos(*nd) * Sphere(node_r))
 
     parts += [_cradle(-1), _cradle(1), _center_hub(), _gopro_mount()]
+    if fairing:
+        parts.append(_front_fairing())
     solids = []
     for sh in parts:
         solids.extend(sh.solids())
