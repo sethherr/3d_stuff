@@ -3,9 +3,14 @@
 Nests in the gap *between* two round aerobar extensions and carries a
 GoPro-mounted light underneath, like a tri/TT cockpit crossbar.
 
-Form: a round "bone" -- a fat circular saddle pod at each end joined by a slim
-round spine. Circular cross-section throughout (no slab faces) for an organic
-look that stays strong and light.
+Form: a faceted "bone" -- a fat hexagonal saddle pod at each end joined by a
+slimmer hexagonal spine. The flat facets give clean FDM bed contact and
+self-supporting (~60deg) overhangs, a deeper section than a round bar (stiffer
+in bending), and a more organic/crystalline look than a perfect cylinder. The
+saddle cups stay circular so they mate the round bars.
+
+Printing: lay it on a flat (the GoPro tab points up as a vertical fin). The
+hex faces print without support; only the down-facing saddle cup wants a little.
 
 - Bars: 22.2 mm OD, 120 mm center-to-center.
 - The body sits between the bars. Each pod end is a semicircular saddle that
@@ -24,16 +29,16 @@ Bar centers sit at (+/-60, 0, 0) with the bar centerline at z = 0.
 from pathlib import Path
 
 from build123d import (
-    Axis,
     Box,
     Cylinder,
-    GeomType,
+    Plane,
     Pos,
+    RegularPolygon,
     Rot,
     export_gltf,
     export_step,
     export_stl,
-    fillet,
+    extrude,
 )
 
 # ---- Bars / saddles ---------------------------------------------------------
@@ -45,13 +50,14 @@ GROOVE_R = BAR_R + CLEAR              # 11.4 mm half-circle cradle
 SPAN_CC = 120.0
 BAR_X = SPAN_CC / 2                   # 60
 
-# ---- Round "bone" body ------------------------------------------------------
-POD_R = 13.5                          # end-pod radius (round saddle section)
+# ---- Faceted "bone" body ----------------------------------------------------
+# Hex radius = vertex radius; flat-to-flat height = 1.732 * radius. The pod must
+# clear the cup (GROOVE_R) with material left for the saddle horns.
+POD_R = 15.5                          # end-pod hex radius (flat-flat ~26.8)
 POD_X = 22.0                          # pod length along X (covers cup + slot)
 POD_CX = BAR_X - POD_X / 2            # 49, pod center in X
-SPINE_R = 10.5                        # slim mid-span spine radius
+SPINE_R = 11.0                        # slim mid-span hex radius (flat-flat ~19)
 SPINE_OVERLAP = 6.0                   # spine reaches into the pods to fuse
-SHOULDER_FILLET = 2.0                 # blend the pod -> spine step
 
 # Zip-tie vertical slot: one tie per side threads through and wraps the bar's
 # outer half. Centered on the bar (y = 0).
@@ -66,31 +72,21 @@ GP_OFFX = (GP_FINGER_T + GP_GAP) / 2  # +/- 3.0
 GP_WIDTH_Y = 15.0
 GP_ROUND_R = GP_WIDTH_Y / 2           # 7.5
 GP_HOLE_D = 5.0
-GP_TOP_Z = -5.0                       # rooted up into the spine
-GP_ROUND_Z = -22.0                    # rounded tip center / pin-hole center
+GP_TOP_Z = -7.0                       # rooted up into the spine
+GP_ROUND_Z = -24.0                    # rounded tip center / pin-hole center
+
+
+def _hex_x(r, length):
+    """A hexagonal prism centered at the origin, axis along X, flat top/bottom."""
+    return extrude(Plane.YZ * RegularPolygon(r, 6), amount=length / 2, both=True)
 
 
 def _body():
-    # Slim round spine spanning the gap, fat round pods at each end.
+    # Slim faceted spine spanning the gap, fat faceted pods at each end.
     spine_len = 2 * (BAR_X - POD_X + SPINE_OVERLAP)
-    body = Rot(0, 90, 0) * Cylinder(SPINE_R, spine_len)
+    body = _hex_x(SPINE_R, spine_len)
     for sign in (-1, 1):
-        pod = Pos(sign * POD_CX, 0, 0) * (Rot(0, 90, 0) * Cylinder(POD_R, POD_X))
-        body = body + pod
-
-    # Blend the pod->spine shoulder so the section flows (and to ease the riser).
-    # Only the inner (spine-radius) ring takes the concave fillet cleanly.
-    shoulders = [
-        e
-        for e in body.edges().filter_by(GeomType.CIRCLE)
-        if abs(e.radius - SPINE_R) < 1e-6 and abs(abs(e.center().X) - (BAR_X - POD_X)) < 1e-3
-    ]
-    for r in (SHOULDER_FILLET, 1.5, 1.0):
-        try:
-            body = fillet(shoulders, r)
-            break
-        except ValueError:
-            continue
+        body = body + Pos(sign * POD_CX, 0, 0) * _hex_x(POD_R, POD_X)
 
     for sign in (-1, 1):
         cx = sign * BAR_X
