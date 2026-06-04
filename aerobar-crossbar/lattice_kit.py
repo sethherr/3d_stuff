@@ -19,15 +19,17 @@ from build123d import (
     Box,
     Compound,
     Cylinder,
+    Edge,
+    Face,
     Plane,
     Pos,
-    Rectangle,
     RegularPolygon,
     Rot,
     Solid,
     Sphere,
     Vector,
     Vertex,
+    Wire,
     export_gltf,
     export_step,
     export_stl,
@@ -112,19 +114,32 @@ def _center_hub():
 
 
 # ---- Aero nose fairing ------------------------------------------------------
-# A pyramid prow on the FRONT (-Y) face: its base is the full-height rectangle on
-# the front faces of the two saddle horns (@cad refs f2035/f2036/f2051/f2052),
-# and it tapers forward to a single point. Front = -Y (direction of travel).
-FAIR_HALF_SPAN = 53.1                 # base half-width = the saddle-horn front faces
-FAIR_FRONT_Y = -12.016                # base plane = those front faces
-FAIR_H = HEX_R * 3 ** 0.5 / 2         # base half-height = the hex flat (full height)
-FAIR_NOSE = 22.0                      # how far forward the point reaches
+# A faceted prow on the FRONT (-Y) face that continues the bar's hex faceting: its
+# back is the two front facets of the saddle horns (@cad f2035/f2036 left,
+# f2051/f2052 right) -- an upper facet and a lower facet meeting at the hex front
+# vertex -- and each side folds along that vertex into the apex. Built as an upper
+# and a lower half-pyramid (each coplanar with a facet) unioned together.
+FAIR_HALF_SPAN = 53.1                 # half-width = the saddle-horn front faces
+FAIR_NOSE = 18.0                      # apex this far forward of the hex front vertex
 
 
 def _front_fairing():
-    base = Pos(0, FAIR_FRONT_Y, 0) * (Plane.XZ * Rectangle(2 * FAIR_HALF_SPAN, 2 * FAIR_H))
-    apex = Vertex(0, FAIR_FRONT_Y - FAIR_NOSE, 0)
-    return loft([base, apex])
+    hf = HEX_R * 3 ** 0.5 / 2          # hex flat half-height (~13.86)
+    fv = -HEX_R                        # hex front vertex y (-16): facets meet here
+    fe = -HEX_R / 2                    # where the facets meet the flats (y=-8, z=+/-hf)
+    half = FAIR_HALF_SPAN
+    Lt, Rt = (-half, fe, hf), (half, fe, hf)
+    Lb, Rb = (-half, fe, -hf), (half, fe, -hf)
+    Lv, Rv = (-half, fv, 0), (half, fv, 0)
+    apex = Vertex(0, fv - FAIR_NOSE, 0)
+
+    def quad(pts):
+        edges = [Edge.make_line(Vector(*pts[i]), Vector(*pts[(i + 1) % 4])) for i in range(4)]
+        return Face(Wire(edges))
+
+    upper = loft([quad([Lt, Rt, Rv, Lv]), apex])   # coplanar with the upper facets
+    lower = loft([quad([Lb, Rb, Rv, Lv]), apex])   # coplanar with the lower facets
+    return upper + lower
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
