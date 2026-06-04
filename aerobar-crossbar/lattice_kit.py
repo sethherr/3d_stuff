@@ -19,8 +19,8 @@ from build123d import (
     Box,
     Compound,
     Cylinder,
-    Ellipse,
     Plane,
+    Polygon,
     Pos,
     RegularPolygon,
     Rot,
@@ -31,7 +31,6 @@ from build123d import (
     export_step,
     export_stl,
     extrude,
-    loft,
 )
 
 from aerobar_crossbar import (
@@ -111,34 +110,24 @@ def _center_hub():
 
 
 # ---- Aero nose fairing ------------------------------------------------------
-# A streamlined solid nose on the FRONT (-Y) face: a teardrop lofted along the
-# span that tapers to a leading edge, taller and pushed further forward at the
-# center than at the ends (a swept-forward prow). Front = -Y (direction of travel).
-FAIR_HALF_SPAN = 50.0    # fairing runs |x| <= this (blends out before the saddles)
-FAIR_NOSE_C = 13.0       # how far forward of the body the LE reaches at center
-FAIR_NOSE_E = 3.0        # ...and at the ends
-FAIR_BACK = 9.0          # how far the fairing laps back into the lattice
-FAIR_H_C = 11.5          # half-height at center
-FAIR_H_E = 5.0           # half-height at the ends
-FAIR_STATIONS = 15
+# A faceted wedge prow on the FRONT (-Y) face: constant full height the whole
+# width, flat angled side faces (not rounded), coming to a vertical point at the
+# front center. Front = -Y (direction of travel).
+FAIR_HALF_SPAN = 50.0                 # fairing runs |x| <= this (clears the saddles)
+FAIR_NOSE = 13.0                      # how far forward of the body the point reaches
+FAIR_BACK = 9.0                       # how far it laps back into the lattice
+FAIR_H = HEX_R * 3 ** 0.5 / 2         # half-height = the hex flat (flush w/ the bar)
 
 
 def _front_fairing():
-    front = -Y_R                          # the lattice's leading (-Y) face
-    profiles = []
-    for i in range(FAIR_STATIONS):
-        t = i / (FAIR_STATIONS - 1)
-        x = -FAIR_HALF_SPAN + 2 * FAIR_HALF_SPAN * t
-        f = 1 - (2 * t - 1) ** 2          # 1 at center -> 0 at the ends
-        nose = FAIR_NOSE_E + (FAIR_NOSE_C - FAIR_NOSE_E) * f
-        h = FAIR_H_E + (FAIR_H_C - FAIR_H_E) * f
-        le = front - nose                 # leading edge (most forward)
-        back = front + FAIR_BACK          # laps back into the lattice
-        yc = (le + back) / 2
-        a = (back - le) / 2               # Y semi-axis
-        # Ellipse in the Y-Z plane at this station -> teardrop pointing forward.
-        profiles.append(Pos(x, yc, 0) * (Plane.YZ * Ellipse(a, h)))
-    return loft(profiles)
+    front = -Y_R                      # the lattice's leading (-Y) face
+    yf = front - FAIR_NOSE            # the point, at the front center
+    yb = front + FAIR_BACK            # the base, lapped back into the lattice
+    # Plan-view triangle (apex forward at x=0), extruded to constant height in Z.
+    tri = Plane.XY * Polygon(
+        (-FAIR_HALF_SPAN, yb), (FAIR_HALF_SPAN, yb), (0, yf)
+    )
+    return extrude(tri, amount=FAIR_H, both=True)
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
