@@ -16,7 +16,7 @@ setup — no manual `uv venv` / `source .venv/bin/activate` dance.
 
 ### Conductor workspaces
 
-`conductor.json` runs `bin/conductor-setup` automatically when a workspace is
+`conductor.json` runs `bin/workspace_setup` automatically when a workspace is
 created, so a new workspace is ready with no manual steps. Instead of building a
 fresh `.venv` per workspace, it points `.venv` at a **shared venv cached by
 `uv.lock` hash** (`~/.cache/seth-3d/venvs/<hash>`), so parallel workspaces on the
@@ -25,7 +25,7 @@ same lockfile reuse one build of the heavy build123d/OCP/vtk stack.
 - `.venv` is a symlink in Conductor workspaces; `python` / `uv run` work through
   it normally.
 - **Changed dependencies?** The new `uv.lock` hashes to a fresh cache dir — re-run
-  `bash bin/conductor-setup` to rebuild and relink. For a private, non-shared
+  `bash bin/workspace_setup` to rebuild and relink. For a private, non-shared
   venv instead, `rm .venv && mise run setup` (mise then creates a local `.venv`).
 
 ## Toolchain notes
@@ -65,41 +65,18 @@ bin/cad step <part>/<part>.py     # (generators self-export, so rarely needed)
 
 The CAD skills (`cad:*`) and `bin/cad` come from the [`cad@text-to-cad`](https://github.com/earthtojake/text-to-cad) Claude Code plugin, declared in `.claude/settings.json` so it installs on clone (Claude Code prompts to trust the marketplace on first use).
 
-Use the `cad:cad-viewer` skill (in Claude Code: `/cad:cad-viewer <part>/<part>.step`) — it starts/reuses the local viewer server and hands back a ready-to-open link.
-
-To start the server directly instead, run its `backend/server.mjs` from the
-installed skill (the path is versioned, so locate it dynamically):
-
-```bash
-VIEWER=$(dirname "$(find ~/.claude/plugins/cache/text-to-cad -path '*/cad-viewer/scripts/viewer/backend/server.mjs' | sort | tail -1)")
-node "$VIEWER/server.mjs" --host 127.0.0.1 --shutdown-after 12h
-```
-
-It prints a base URL (e.g. `http://127.0.0.1:4178/`). Open a model by appending
-an absolute `?dir=` (the model folder) and a `?file=` relative to it:
-
-```
-http://127.0.0.1:4178/?dir=/absolute/path/to/<part>&file=<part>.step
-```
-
-Swap `file=` for `.<part>.step.glb` or `<part>.stl` to load the lighter
-tessellated mesh. The server self-stops after 12h (`--shutdown-after`).
+To view a part, use the `cad:cad-viewer` skill (in Claude Code:
+`/cad:cad-viewer <part>/<part>.step`) — it starts/reuses the local viewer server
+and hands back a ready-to-open link.
 
 ## 3D printing (Bambu Lab)
 
-Parts export a print-ready `.stl` (the `.glb` is viewer-only). The path from
-part to print uses two plugin skills:
+Parts export a print-ready `.stl` (the `.glb` is viewer-only). Slice it to
+`.gcode` with the `cad:gcode` skill (drives OrcaSlicer; `brew install --cask
+orcaslicer` on macOS), then print over LAN with the `cad:bambu-labs` skill.
 
-1. **Slice** the mesh to plain `.gcode` with the `cad:gcode` skill — it drives a
-   real slicer CLI (OrcaSlicer; `brew install --cask orcaslicer` on macOS) and
-   statically validates the output. Slicing needs a printer/profile JSON.
-2. **Print** over LAN with the `cad:bambu-labs` skill, which uploads the
-   validated `.gcode` via FTPS and starts the job via MQTT.
-
-The printer must be in **LAN Only + Developer Mode** (set on its touchscreen
-under network settings). Store its IP, access code, and model in a
-`bambu-printers.json` at the repo root — this is **git-ignored** because it
-holds the LAN access code:
+Store each printer's IP, access code, and model in a `bambu-printers.json` at
+the repo root — **git-ignored** because it holds the LAN access code:
 
 ```json
 {
@@ -109,6 +86,6 @@ holds the LAN access code:
 }
 ```
 
-`cad:bambu-labs` defaults to **dry-run** — real printer traffic requires
-`--execute`, and starting a print requires `--execute --confirm-start-print`.
-Check the build plate, filament, and nozzle before a live start.
+The printer must be in **LAN Only + Developer Mode** (set on its touchscreen).
+`cad:bambu-labs` defaults to dry-run — see the skill for the flags that enable
+real printer traffic and start a print.
