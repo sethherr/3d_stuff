@@ -51,7 +51,7 @@ Z_R = 12.0             # lattice half-extent in Z
 SHELL_WALL = 2.4       # cradle cup wall thickness (the only solid at the ends)
 SEAT_CLEAR = 0.4       # keep struts this far clear of each bar's seat
 TIE_W = TIE_SLOT_Y     # zip-tie channel width (matches the tie slot)
-TIE_DEPTH = 1.4        # recess so the tie sits flush with the rest of the saddle
+RAMP_ANG = 22.0        # tie channel taper: open at the outboard edge, thickening inboard
 
 
 def _kelvin_verts():
@@ -136,20 +136,20 @@ def _lattice():
     return parts
 
 
-def _tie_channel(bx):
-    """A shallow groove across the cradle (centered in Y) so the zip tie wrapping
-    the bar sits recessed -- flush with the rest of the saddle, not proud."""
-    big = 2 * HEX_R + 6
-    reach = GROOVE_R + SHELL_WALL + 2
-    slab = Pos(bx, 0, 0) * Box(2 * reach, TIE_W, 2 * reach)
-    keep = Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R + SHELL_WALL - TIE_DEPTH, big))
-    return slab - keep
+def _tie_ramp(sign, top):
+    """A wedge that grooves the zip-tie channel into just the top (or bottom) of
+    the cradle: open to the seat (no wall) at the outboard edge, the floor tilting
+    up so the wall thickens inboard. Centered in Y, TIE_W wide."""
+    bx = sign * BAR_X
+    s = 1 if top else -1
+    box = Box(80, TIE_W, 80)
+    return Pos(bx, 0, s * GROOVE_R) * Rot(0, sign * RAMP_ANG, 0) * Pos(0, 0, s * 40) * box
 
 
 def _cradle(sign):
     """Thin C-shaped cup shell hugging the inner half of the bar -- the only solid
-    left at the ends. The foam laps right up against its outer face. A flush
-    zip-tie channel is grooved across its top and bottom."""
+    left at the ends. The foam laps right up against its outer face. A tapered
+    zip-tie channel is cut into its top and bottom edges."""
     bx = sign * BAR_X
     big = 2 * HEX_R + 6
     ring = Pos(bx, 0, 0) * (
@@ -161,7 +161,7 @@ def _cradle(sign):
     env = Pos(bx - 8 * sign, 0, 0) * extrude(
         Plane.YZ * RegularPolygon(HEX_R, 6), amount=8, both=True
     )
-    return (ring & env) - _tie_channel(bx)
+    return (ring & env) - _tie_ramp(sign, True) - _tie_ramp(sign, False)
 
 
 def _center_hub():
