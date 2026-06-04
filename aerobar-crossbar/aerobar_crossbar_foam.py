@@ -36,11 +36,15 @@ from aerobar_crossbar import (
     BAR_X,
     GROOVE_R,
     HEX_R,
-    TIE_SLOT_OFFX,
-    TIE_SLOT_X,
-    TIE_SLOT_Y,
     _gopro_mount,
 )
+
+# Tie geometry the lattice keeps clear and grooves into the cradle. The base part
+# redesigned its own tie routing (through-saddle X-holes); the foam variant keeps
+# its own cradle-channel approach, so these live here rather than imported.
+TIE_SLOT_OFFX = 16.0   # inboard channel offset from each bar center
+TIE_SLOT_X = 3.0       # channel width (X)
+TIE_SLOT_Y = 6.0       # channel / tie width (Y)
 
 S = 2.3                # Kelvin cell scale (cell period = 4*S)
 STRUT_R = 0.8          # strut radius
