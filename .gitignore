@@ -1,5 +1,5 @@
 # Local virtualenv — a real dir for plain clones, a symlink to the shared cached
-# venv in Conductor workspaces (bin/conductor-setup). No trailing slash so the
+# venv in Conductor workspaces (bin/workspace_setup). No trailing slash so the
 # symlink form is ignored too.
 .venv
 __pycache__/
