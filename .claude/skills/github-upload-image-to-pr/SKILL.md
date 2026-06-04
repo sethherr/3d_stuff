@@ -7,7 +7,7 @@ description: >-
   attach, embed, add, put, post, drop, show, document. Also covers visually documenting test runs,
   bug repros, UI states, or CI failures on an existing PR. The `gh` CLI cannot upload images;
   this skill drives a real browser to GitHub's user-attachments uploader.
-allowed-tools: Bash(gh:*), Bash(cp:*), ToolSearch, Read
+allowed-tools: Bash(gh:*), Bash(cp:*), Bash(mkdir:*), Bash(rm:*), ToolSearch, Read
 ---
 
 # Upload Image to PR
@@ -148,10 +148,11 @@ Substitute whichever form (markdown `![](...)` or HTML `<img ...>`) GitHub retur
 
 **Post as a comment** (the default). A comment keeps the description tight and skimmable, and avoids re-editing the body (and its notification noise) on every recapture.
 
-If a screenshots comment already exists (one authored by you whose body starts with `## Screenshots`), edit it in place instead of posting a new one:
+If a screenshots comment already exists (one **you** authored whose body starts with `## Screenshots`), edit it in place instead of posting a new one. Filter on the author too — otherwise a `## Screenshots` comment from someone else would get clobbered:
 ```bash
+ME=$(gh api user --jq .login)
 SCREENSHOT_COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{PR_NUMBER}/comments \
-  --jq '.[] | select(.body | startswith("## Screenshots")) | .id' | head -1)
+  --jq ".[] | select(.user.login == \"$ME\" and (.body | startswith(\"## Screenshots\"))) | .id" | head -1)
 ```
 
 Write the comment body to a temp file:
@@ -162,7 +163,7 @@ Write the comment body to a temp file:
 ```
 
 - If `$SCREENSHOT_COMMENT_ID` is empty: `gh pr comment {PR_NUMBER} --body-file <tmp-comment-file>`.
-- Otherwise: `gh api -X PATCH repos/{owner}/{repo}/issues/comments/$SCREENSHOT_COMMENT_ID -f body=@<tmp-comment-file>`.
+- Otherwise: `gh api -X PATCH repos/{owner}/{repo}/issues/comments/$SCREENSHOT_COMMENT_ID -F body=@<tmp-comment-file>` (use `-F`, not `-f` — only `-F/--field` expands `@<path>` to the file's contents; `-f` would set the body to the literal string `@<tmp-comment-file>`).
 
 Only edit the PR description instead when the user explicitly asks for it:
 ```bash
