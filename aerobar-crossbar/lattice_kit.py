@@ -123,7 +123,7 @@ def _center_hub():
 # f2051/f2052 right) -- an upper facet and a lower facet meeting at the hex front
 # vertex -- and each side folds along that vertex into the apex. Built as an upper
 # and a lower half-pyramid (each coplanar with a facet) unioned together.
-FAIR_HALF_SPAN = 53.1                 # half-width = the saddle-horn front faces
+FAIR_HALF_SPAN = BAR_X               # half-width = out to the bar centers / cups
 FAIR_NOSE = 18.0                      # apex this far forward of the hex front vertex
 
 
