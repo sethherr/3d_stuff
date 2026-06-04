@@ -1,15 +1,15 @@
-"""Variant D -- "Foam" (3D strut lattice).
+"""Aerobar crossbar -- "Foam" (3D strut lattice).
 
-Low-fidelity design exploration matching a reference photo of an open-cell strut
-lattice: the mid-span is filled with a 3D node-and-strut network based on the
-Kelvin cell (truncated octahedron) tiled through the volume, with beaded nodes --
-an open metallic-foam look. Solid hex collars at each end still host the saddles
-+ tie slots; the GoPro tab hangs off a small center hub.
+An open-cell strut lattice (after a reference photo): a node-and-strut network
+based on the Kelvin cell (truncated octahedron) tiled through the whole volume
+with beaded nodes -- a metallic-foam look. The lattice runs the full length and
+wraps around each saddle; the only solid left at the ends is a thin C-shaped
+cradle cup on the bar's seat face, and a small center hub carries the GoPro tab.
 
 The lattice is assembled as a Compound of cylinders + spheres (no booleans) so it
 stays fast; it's a visual exploration, not a watertight/printable solid yet.
 
-Run: python aerobar-crossbar/variant_d_foam.py
+Run: python aerobar-crossbar/aerobar_crossbar_foam.py
 """
 
 import itertools
