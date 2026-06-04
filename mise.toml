@@ -1,0 +1,18 @@
+# mise manages this project's Python toolchain via uv.
+# Entering this directory selects Python 3.12.13 and activates the uv-managed
+# .venv. (Python 3.14 has no build123d/OCP wheels yet, so we pin 3.12.)
+
+[tools]
+python = "3.12.13"
+uv = "latest"
+
+[env]
+# uv creates/manages .venv; mise auto-activates it so `python` resolves to it.
+_.python.venv = { path = ".venv", create = true, uv_create_args = ["--python", "3.12.13"] }
+
+[tasks.setup]
+description = "Install CAD Python deps + Playwright Chromium (for snapshots)"
+run = [
+  "uv sync",
+  "uv run playwright install chromium",
+]
