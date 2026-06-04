@@ -45,9 +45,11 @@ from aerobar_crossbar import (
 S = 2.3                # Kelvin cell scale (cell period = 4*S)
 STRUT_R = 0.8          # strut radius
 NODE_R = 1.15          # beaded node radius
-MID_X = 40.0           # lattice fills |x| <= ~this; collars solid beyond
+EDGE_X = BAR_X - 1.0   # lattice fills out to here -- just shy of the bar centers
 Y_R = 12.0             # lattice half-extent in Y (within the hex flats)
 Z_R = 12.0             # lattice half-extent in Z
+SHELL_WALL = 2.4       # cradle cup wall thickness (the only solid at the ends)
+SEAT_CLEAR = 0.4       # keep struts this far clear of each bar's seat
 
 
 def _kelvin_verts():
@@ -78,20 +80,34 @@ def _strut(p0, p1):
     )
 
 
+def _in_bounds(p):
+    return abs(p[0]) <= EDGE_X and abs(p[1]) <= Y_R and abs(p[2]) <= Z_R
+
+
+def _excluded(p):
+    """Regions the lattice must stay out of: each bar's seat and each tie slot."""
+    for s in (-1, 1):
+        bx = s * BAR_X
+        # keep the cup clear so the bar can seat against the cradle shell
+        if (p[0] - bx) ** 2 + p[2] ** 2 <= (GROOVE_R + SEAT_CLEAR) ** 2:
+            return True
+        # keep a clean vertical channel for the zip tie behind the saddle
+        sx = bx - s * TIE_SLOT_OFFX
+        if abs(p[0] - sx) <= TIE_SLOT_X / 2 + 0.8 and abs(p[1]) <= TIE_SLOT_Y / 2 + 0.8:
+            return True
+    return False
+
+
 def _lattice():
     verts, edges = _kelvin_edges()
     # BCC tiling: simple-cubic origins of period 4S, plus body-centred copies.
-    reach = MID_X + 2 * S
-    n = int(reach / (4 * S)) + 1
+    n = int(BAR_X / (4 * S)) + 1
     rng = range(-n, n + 1)
     origins = []
     for i, j, k in itertools.product(rng, repeat=3):
         base = (i * 4 * S, j * 4 * S, k * 4 * S)
         origins.append(base)
         origins.append((base[0] + 2 * S, base[1] + 2 * S, base[2] + 2 * S))
-
-    def inside(p):
-        return abs(p[0]) <= MID_X + 1.5 and abs(p[1]) <= Y_R and abs(p[2]) <= Z_R
 
     seen_edges, seen_nodes = set(), set()
     parts = []
@@ -100,7 +116,9 @@ def _lattice():
         for a, b in edges:
             pa, pb = scaled[a], scaled[b]
             mid = tuple((pa[i] + pb[i]) / 2 for i in range(3))
-            if not inside(mid):
+            # fill the whole length, but skip struts that intrude on a bar seat
+            # or tie slot -- so the foam wraps right up to (and around) each saddle
+            if not _in_bounds(mid) or _excluded(pa) or _excluded(pb):
                 continue
             key = tuple(sorted((tuple(round(c, 2) for c in pa),
                                 tuple(round(c, 2) for c in pb))))
@@ -110,24 +128,27 @@ def _lattice():
             parts.append(_strut(pa, pb))
             for p in (pa, pb):
                 nk = tuple(round(c, 2) for c in p)
-                if nk not in seen_nodes and inside(p):
+                if nk not in seen_nodes and _in_bounds(p) and not _excluded(p):
                     seen_nodes.add(nk)
                     parts.append(Pos(*p) * Sphere(NODE_R))
     return parts
 
 
-def _collar(sign):
-    cx = sign * (MID_X - 1 + BAR_X) / 2
-    block = Pos(cx, 0, 0) * extrude(
-        Plane.YZ * RegularPolygon(HEX_R, 6), amount=(BAR_X - MID_X + 1) / 2, both=True
+def _cradle(sign):
+    """Thin C-shaped cup shell hugging the inner half of the bar -- the only solid
+    left at the ends. The foam laps right up against its outer face."""
+    bx = sign * BAR_X
+    big = 2 * HEX_R + 6
+    ring = Pos(bx, 0, 0) * (
+        (Rot(90, 0, 0) * Cylinder(GROOVE_R + SHELL_WALL, big))
+        - (Rot(90, 0, 0) * Cylinder(GROOVE_R, big))
     )
-    # saddle cup + tie slot
-    bar_x = sign * BAR_X
-    block = block - Pos(bar_x, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
-    block = block - Pos(bar_x - sign * TIE_SLOT_OFFX, 0, 0) * Box(
-        TIE_SLOT_X, TIE_SLOT_Y, 2 * HEX_R + 6
+    # Clip the annulus to the hex profile and to the inboard half (x toward
+    # center), leaving a half-pipe trough that opens outward to take the bar.
+    env = Pos(bx - 8 * sign, 0, 0) * extrude(
+        Plane.YZ * RegularPolygon(HEX_R, 6), amount=8, both=True
     )
-    return block
+    return ring & env
 
 
 def _center_hub():
@@ -136,7 +157,7 @@ def _center_hub():
 
 
 def gen_step():
-    shapes = _lattice() + [_collar(-1), _collar(1), _center_hub(), _gopro_mount()]
+    shapes = _lattice() + [_cradle(-1), _cradle(1), _center_hub(), _gopro_mount()]
     # Flatten everything to individual solids so the Compound is well-formed.
     solids = []
     for sh in shapes:
