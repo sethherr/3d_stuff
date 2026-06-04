@@ -33,6 +33,18 @@ uv run python <part>/<part>.py
 python <part>/<part>.py
 ```
 
+## `bin/cad`
+
+Thin wrapper around the `cad` skill's launchers so the versioned plugin path
+isn't hard-coded. Resolves `~/.claude/plugins/cache/text-to-cad/.../skills/cad/scripts/<tool>`
+and runs it:
+
+```bash
+bin/cad snapshot --input <part>/<part>.step --output out.png --camera iso
+bin/cad inspect refs --facts <part>/<part>.step
+bin/cad step <part>/<part>.py     # (generators self-export, so rarely needed)
+```
+
 ## CAD Viewer
 
 Use the `cad:cad-viewer` skill (in Claude Code: `/cad:cad-viewer <part>/<part>.step`) — it starts/reuses the local viewer server and hands back a ready-to-open link.
