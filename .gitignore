@@ -1,3 +1,6 @@
 .venv/
 __pycache__/
 *.pyc
+
+# CAD Viewer's hidden topology cache sidecars (regenerated on render)
+.*.step.glb
