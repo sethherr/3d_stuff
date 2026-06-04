@@ -143,7 +143,12 @@ def _front_fairing():
 
     upper = loft([quad([Lt, Rt, Rv, Lv]), apex])   # coplanar with the upper facets
     lower = loft([quad([Lb, Rb, Rv, Lv]), apex])   # coplanar with the lower facets
-    return upper + lower
+    prow = upper + lower
+    # Don't cover the bar seats: carve the cup cylinders so the prow's back edges
+    # follow the round cup opening (@cad e2801) instead of a straight edge.
+    for bx in (-BAR_X, BAR_X):
+        prow = prow - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
+    return prow
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
