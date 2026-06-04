@@ -108,10 +108,16 @@ def _center_hub():
     return Pos(0, 0, -10.5) * Box(14, 15, 6)
 
 
-def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15, label="lattice"):
+def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
+               label="lattice", strict_bounds=False):
     """Tile `base_nodes` (positions within one `cell`-sized cube) on a cubic grid,
     connect each node to existing neighbours at `neighbor_offsets`, and assemble
-    the struts + nodes + end cradles + GoPro hub into one Compound."""
+    the struts + nodes + end cradles + GoPro hub into one Compound.
+
+    By default a strut is kept when its midpoint is in bounds (struts may poke a
+    little past the edge). `strict_bounds=True` keeps a strut only when *both*
+    endpoints are in bounds -- needed for longer struts that would otherwise
+    leave stubs sticking out (e.g. the dense FCC variant)."""
     nx = int(EDGE_X / cell) + 2
     ny = int(Y_R / cell) + 2
     nz = int(Z_R / cell) + 2
@@ -137,7 +143,8 @@ def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15, lab
             seen_edges.add(ek)
             pa, pb = p, nodes[qk]
             mid = tuple((pa[i] + pb[i]) / 2 for i in range(3))
-            if not _in_bounds(mid) or _excluded(pa) or _excluded(pb):
+            in_region = (_in_bounds(pa) and _in_bounds(pb)) if strict_bounds else _in_bounds(mid)
+            if not in_region or _excluded(pa) or _excluded(pb):
                 continue
             parts.append(_strut(pa, pb, strut_r))
             for nd, ndk in ((pa, key), (pb, qk)):
