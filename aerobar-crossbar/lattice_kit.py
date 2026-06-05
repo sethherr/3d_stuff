@@ -103,6 +103,11 @@ def _cradle(sign):
     env = Pos(bx - 8 * sign, 0, 0) * extrude(
         Plane.YZ * RegularPolygon(HEX_R, 6), amount=8, both=True
     )
+    # Square the env's front to full height so the cup's front edge is one clean
+    # arc where it meets the fairing (the hex facets otherwise clip the cup top
+    # and bottom short, splitting that edge into three).
+    hf = HEX_R * 3 ** 0.5 / 2
+    env = env + Pos(bx - 8 * sign, -10, 0) * Box(16, 8, 2 * hf + 1)
     cradle = (ring & env) - _tie_ramp(sign, True) - _tie_ramp(sign, False)
     # Flatten both ends to single planes level with the lattice edges: the rear,
     # and the front where the cradle joins the fairing (instead of a hex point).
