@@ -19,22 +19,18 @@ from build123d import (
     Box,
     Compound,
     Cylinder,
-    Edge,
-    Face,
     Plane,
+    Polygon,
     Pos,
     RegularPolygon,
     Rot,
     Solid,
     Sphere,
     Vector,
-    Vertex,
-    Wire,
     export_gltf,
     export_step,
     export_stl,
     extrude,
-    loft,
 )
 
 from aerobar_crossbar import (
@@ -118,40 +114,29 @@ def _center_hub():
 
 
 # ---- Aero nose fairing ------------------------------------------------------
-# A faceted prow on the FRONT (-Y) face that continues the bar's hex faceting: its
-# back is the two front facets of the saddle horns (@cad f2035/f2036 left,
-# f2051/f2052 right) -- an upper facet and a lower facet meeting at the hex front
-# vertex -- and each side folds along that vertex into the apex. Built as an upper
-# and a lower half-pyramid (each coplanar with a facet) unioned together.
+# A flat-top/flat-bottom wedge on the FRONT (-Y) face: the top and bottom are
+# horizontal at +/-the hex flat -- level with the bar's flat top/bottom and the
+# cup tops -- and the wedge narrows in plan to a vertical leading edge at the
+# center. The bar seats are carved so the prow follows the round cups and the
+# fairing touches the bar.
 FAIR_HALF_SPAN = BAR_X               # half-width = out to the bar centers / cups
-FAIR_NOSE = 18.0                      # apex this far forward of the hex front vertex
+FAIR_NOSE = 18.0                     # leading edge this far forward of the front vertex
+FAIR_BACK = -HEX_R / 2               # back of the wedge = the flat top/bottom front edge
 
 
 def _front_fairing():
-    hf = HEX_R * 3 ** 0.5 / 2          # hex flat half-height (~13.86)
-    fv = -HEX_R                        # hex front vertex y (-16): facets meet here
-    fe = -HEX_R / 2                    # where the facets meet the flats (y=-8, z=+/-hf)
-    half = FAIR_HALF_SPAN
-    Lt, Rt = (-half, fe, hf), (half, fe, hf)
-    Lb, Rb = (-half, fe, -hf), (half, fe, -hf)
-    Lv, Rv = (-half, fv, 0), (half, fv, 0)
-    apex = Vertex(0, fv - FAIR_NOSE, 0)
-
-    def quad(pts):
-        edges = [Edge.make_line(Vector(*pts[i]), Vector(*pts[(i + 1) % 4])) for i in range(4)]
-        return Face(Wire(edges))
-
-    upper = loft([quad([Lt, Rt, Rv, Lv]), apex])   # coplanar with the upper facets
-    lower = loft([quad([Lb, Rb, Rv, Lv]), apex])   # coplanar with the lower facets
-    prow = upper + lower
-    # Don't cover the bar seats: carve the cup cylinders at the seat radius so the
-    # prow's cup opening matches the cradle and the fairing touches the bar (prow +
-    # cradle form one continuous cup). (A ~1 mm^2 sliver face remains at the
-    # ridge-tangent point -- a boolean artifact that fuses out when the part is
-    # made watertight; cutting it away would lift the prow off the bar.)
+    hf = HEX_R * 3 ** 0.5 / 2         # hex flat half-height -> flat top/bottom at +/-hf
+    yf = -HEX_R - FAIR_NOSE           # leading-edge y, forward of the hex front vertex
+    # Plan-view triangle (full width at the back, vertex forward) extruded to a
+    # constant height -> flat horizontal top and bottom.
+    tri = Plane.XY * Polygon(
+        (-FAIR_HALF_SPAN, FAIR_BACK), (FAIR_HALF_SPAN, FAIR_BACK), (0, yf)
+    )
+    wedge = extrude(tri, amount=hf, both=True)
+    # Carve the bar seats so the prow follows the round cups and touches the bar.
     for bx in (-BAR_X, BAR_X):
-        prow = prow - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
-    return prow
+        wedge = wedge - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
+    return wedge
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
