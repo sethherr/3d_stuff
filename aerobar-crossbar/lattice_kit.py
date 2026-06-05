@@ -145,9 +145,11 @@ def _front_fairing():
     lower = loft([quad([Lb, Rb, Rv, Lv]), apex])   # coplanar with the lower facets
     prow = upper + lower
     # Don't cover the bar seats: carve the cup cylinders so the prow's back edges
-    # follow the round cup opening (@cad e2801) instead of a straight edge.
+    # follow the round cup opening. Cut 1 mm proud of the seat -- it gives the
+    # prow clearance round the bar and pushes the cut past the ridge-tangent point
+    # so the upper/lower cup arcs meet cleanly (no sliver face) at the ridge.
     for bx in (-BAR_X, BAR_X):
-        prow = prow - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
+        prow = prow - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R + 1.0, 2 * HEX_R + 6))
     return prow
 
 
