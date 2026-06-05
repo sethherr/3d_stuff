@@ -20,17 +20,19 @@ from build123d import (
     Compound,
     Cylinder,
     Plane,
-    Polygon,
     Pos,
+    Rectangle,
     RegularPolygon,
     Rot,
     Solid,
     Sphere,
     Vector,
+    Vertex,
     export_gltf,
     export_step,
     export_stl,
     extrude,
+    loft,
 )
 
 from aerobar_crossbar import (
@@ -121,30 +123,25 @@ def _center_hub():
 
 
 # ---- Aero nose fairing ------------------------------------------------------
-# A flat-top/flat-bottom wedge on the FRONT (-Y) face: the top and bottom are
-# horizontal at +/-the hex flat -- level with the bar's flat top/bottom and the
-# cup tops -- and the wedge narrows in plan to a vertical leading edge at the
-# center. The bar seats are carved so the prow follows the round cups and the
-# fairing touches the bar.
+# An oblique pyramid on the FRONT (-Y) face: its base is the full-height rectangle
+# at the lattice front, and it tapers to a single apex at the top-front. The top
+# face stays a flat horizontal triangle (level with the bar's flat top / cup tops,
+# perpendicular to the vertical base); the bottom and sides slope up to the apex.
+# The bar seats are carved so the prow follows the round cups and touches the bar.
 FAIR_HALF_SPAN = BAR_X               # half-width = out to the bar centers / cups
-FAIR_NOSE = 18.0                     # leading edge this far forward of the lattice front
-FAIR_BACK = -Y_R                     # back of the wedge = the lattice front (no overlap)
+FAIR_NOSE = 18.0                     # apex this far forward of the lattice front
+FAIR_BACK = -Y_R                     # base = the lattice front (no overlap)
 
 
 def _front_fairing():
-    hf = HEX_R * 3 ** 0.5 / 2         # hex flat half-height -> flat top/bottom at +/-hf
-    yf = FAIR_BACK - FAIR_NOSE        # leading-edge y, forward of the lattice
-    # Plan-view triangle (full width at the back, vertex forward) extruded to a
-    # constant height -> flat horizontal top and bottom. align=None keeps the raw
-    # coords -- Polygon otherwise re-centers the shape onto the lattice.
-    tri = Plane.XY * Polygon(
-        (-FAIR_HALF_SPAN, FAIR_BACK), (FAIR_HALF_SPAN, FAIR_BACK), (0, yf), align=None
-    )
-    wedge = extrude(tri, amount=hf, both=True)
+    hf = HEX_R * 3 ** 0.5 / 2         # hex flat half-height
+    base = Pos(0, FAIR_BACK, 0) * (Plane.XZ * Rectangle(2 * FAIR_HALF_SPAN, 2 * hf))
+    apex = Vertex(0, FAIR_BACK - FAIR_NOSE, hf)    # top-front point (oblique)
+    prow = loft([base, apex])
     # Carve the bar seats so the prow follows the round cups and touches the bar.
     for bx in (-BAR_X, BAR_X):
-        wedge = wedge - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
-    return wedge
+        prow = prow - Pos(bx, 0, 0) * (Rot(90, 0, 0) * Cylinder(GROOVE_R, 2 * HEX_R + 6))
+    return prow
 
 
 def build_part(base_nodes, neighbor_offsets, cell, strut_r=0.8, node_r=1.15,
