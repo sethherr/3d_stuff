@@ -1,15 +1,16 @@
-"""Shared builder for strut-lattice crossbar explorations.
+"""Shared builder for the strut-lattice crossbar.
 
-Each lattice variant just defines a unit cell -- a list of base node positions
-and the neighbour offsets that become struts -- and calls `build_part`. This kit
-handles the rest, identically to `aerobar_crossbar_foam.py`: tile the cell across
-the volume, draw struts (cylinders) + beaded nodes (spheres), run the lattice the
-full length and wrap it around each saddle (only a thin C-shaped cradle cup stays
-solid), keep the bar seats + tie channels clear, and hang the GoPro tab off a
-small center hub.
+`aerobar_crossbar.py` defines a unit cell -- a list of base node positions and the
+neighbour offsets that become struts -- and calls `build_part`. This kit handles
+the rest: tile the cell across the volume, draw struts (cylinders) + beaded nodes
+(spheres), run the lattice the full length, keep the bar seats + tie channels
+clear, hang the GoPro tab off a small center hub, build the thin C-shaped cradle
+cups, and add the front aero prow.
+
+Also holds the shared bar/saddle/GoPro geometry and constants.
 
 Parts are assembled as a Compound of cylinders + spheres (no booleans) so they
-stay fast; these are visual studies, not watertight/printable solids yet.
+stay fast; this is a visual study, not a watertight/printable solid yet.
 """
 
 import itertools
@@ -35,12 +36,40 @@ from build123d import (
     loft,
 )
 
-from aerobar_crossbar import (
-    BAR_X,
-    GROOVE_R,
-    HEX_R,
-    _gopro_mount,
-)
+# ---- Bar / saddle / GoPro geometry ------------------------------------------
+BAR_D = 22.2
+BAR_R = BAR_D / 2
+CLEAR = 0.3
+GROOVE_R = BAR_R + CLEAR              # 11.4 mm half-circle cradle
+SPAN_CC = 120.0
+BAR_X = SPAN_CC / 2                   # 60: bar centers at +/-BAR_X
+HEX_R = 16.0                          # hex section radius (vertex)
+
+# GoPro 2-prong tab mount (male, underside).
+GP_FINGER_T = 3.0
+GP_GAP = 3.0
+GP_OFFX = (GP_FINGER_T + GP_GAP) / 2
+GP_WIDTH_Y = 15.0
+GP_ROUND_R = GP_WIDTH_Y / 2
+GP_HOLE_D = 5.0
+GP_TOP_Z = -11.0                      # rooted up into the bar
+GP_ROUND_Z = -28.0                    # rounded tip / pin-hole center
+
+
+def _gopro_mount():
+    m = None
+    for fx in (-GP_OFFX, GP_OFFX):
+        straight = Pos(fx, 0, (GP_TOP_Z + GP_ROUND_Z) / 2) * Box(
+            GP_FINGER_T, GP_WIDTH_Y, GP_TOP_Z - GP_ROUND_Z
+        )
+        tip = Pos(fx, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * Cylinder(GP_ROUND_R, GP_FINGER_T))
+        finger = straight + tip
+        hole = Pos(fx, 0, GP_ROUND_Z) * (
+            Rot(0, 90, 0) * Cylinder(GP_HOLE_D / 2, GP_FINGER_T + 2)
+        )
+        finger = finger - hole
+        m = finger if m is None else m + finger
+    return m
 
 # Tie geometry the lattice keeps clear and grooves into the cradle. The base part
 # redesigned its own tie routing (through-saddle X-holes); the lattice variants

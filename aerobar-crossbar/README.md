@@ -3,10 +3,15 @@
 A parametric build123d part that nests in the gap between two aerobar extensions
 and carries a GoPro-mounted light underneath.
 
-It clips between the two Ø22.2 mm aerobars with a semicircular saddle on each
-side, secures with one zip tie per side, and has a GoPro 2-prong tab underneath
-to aim a light. The bar is a faceted (hex) section lightened with diamond
-cutouts through the mid-span.
+It clips between the two Ø22.2 mm aerobars with a semicircular saddle cup on each
+side (secured with one zip tie per side) and has a GoPro 2-prong tab underneath
+to aim a light. The mid-span is an open **diamond-cubic strut lattice**, and a
+faceted **aero prow** — an oblique pyramid with a flat top, level with the bar —
+sits on the front.
+
+The diamond lattice (two interpenetrating FCC lattices, every node joined to four
+tetrahedral neighbours) is near-isotropic and springy with a clean, organic look,
+and prints relatively cleanly (only four struts meet at each node).
 
 ## Build
 
@@ -14,28 +19,17 @@ cutouts through the mid-span.
 python aerobar-crossbar/aerobar_crossbar.py
 ```
 
-Running the script self-exports `.step`, `.stl`, and `.glb` alongside it — no
-skill launcher needed.
+The script self-exports `.step`, `.stl`, and `.glb` alongside it — no skill
+launcher needed. The lattice is thousands of separate solids, so the meshes are
+100+ MB; the `.stl` / `.glb` / `.step` exports are git-ignored — regenerate them
+by running the script.
 
-## Lattice explorations
+`aerobar_crossbar.py` just defines the lattice unit cell and calls into
+`lattice_kit.py`, the shared builder that tiles the cell, carves the saddle cups
+and tie channels, hangs the GoPro tab, and adds the front prow.
 
-Alternative versions that replace the solid mid-span with an open strut lattice
-running the full length and wrapping around each saddle (only a thin cradle cup
-stays solid; the tie channel is cut into the cup's top and bottom edges). Each is
-its own self-exporting script; the three `lattice_*` ones share `lattice_kit.py`
-and differ only by their unit cell. Their meshes are 100+ MB, so the `.stl` /
-`.glb` / `.step` exports are git-ignored — regenerate by running the script.
+## Status
 
-| Variant | Lattice | What it's good for |
-| --- | --- | --- |
-| `aerobar_crossbar_foam.py` | Kelvin foam (truncated octahedron) | Near-isotropic — similar stiffness in every direction, no weak axis — and spreads stress smoothly, so it's a strong all-rounder per gram. The most organic look (matches the reference photo). |
-| `lattice_bcc.py` | Body-centered cubic (body-diagonal struts) | The most open and lightest. Bending-dominated, so it's springy and soaks up shock and vibration well; the diagonal struts also self-support cleanly when printed. |
-| `lattice_octet.py` | Octet truss (FCC nearest-neighbors) | Stretch-dominated, so it's the stiffest and strongest for its weight — the pick when rigidity matters most. The trade-off is more material and longer print time. |
-| `lattice_diamond.py` | Diamond cubic (4-connected tetrahedral) | Near-isotropic and smooth like the foam but with only four struts per node, so it prints cleanly and stays springy — a good balance of stiffness and give. |
-
-```sh
-python aerobar-crossbar/lattice_bcc.py        # or _octet / _diamond / aerobar_crossbar_foam
-```
-
-These are visual studies (overlapping struts assembled as a compound, not yet a
-watertight/printable solid).
+This is a visual study — the struts are overlapping solids in a Compound, not yet
+fused into a watertight, printable solid. The remaining step before printing is a
+fuse/fillet pass to make it manifold.
