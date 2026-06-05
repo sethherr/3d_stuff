@@ -104,8 +104,10 @@ def _cradle(sign):
         Plane.YZ * RegularPolygon(HEX_R, 6), amount=8, both=True
     )
     cradle = (ring & env) - _tie_ramp(sign, True) - _tie_ramp(sign, False)
-    # Flatten the rear to a single plane level with the lattice's back edge.
-    cradle = cradle - Pos(0, Y_R + 50, 0) * Box(400, 100, 400)
+    # Flatten both ends to single planes level with the lattice edges: the rear,
+    # and the front where the cradle joins the fairing (instead of a hex point).
+    cradle = cradle - Pos(0, Y_R + 50, 0) * Box(400, 100, 400)        # rear (+Y)
+    cradle = cradle - Pos(0, -(Y_R + 50), 0) * Box(400, 100, 400)     # front (-Y)
     return cradle
 
 
@@ -120,17 +122,18 @@ def _center_hub():
 # center. The bar seats are carved so the prow follows the round cups and the
 # fairing touches the bar.
 FAIR_HALF_SPAN = BAR_X               # half-width = out to the bar centers / cups
-FAIR_NOSE = 18.0                     # leading edge this far forward of the front vertex
-FAIR_BACK = -HEX_R / 2               # back of the wedge = the flat top/bottom front edge
+FAIR_NOSE = 18.0                     # leading edge this far forward of the lattice front
+FAIR_BACK = -Y_R                     # back of the wedge = the lattice front (no overlap)
 
 
 def _front_fairing():
     hf = HEX_R * 3 ** 0.5 / 2         # hex flat half-height -> flat top/bottom at +/-hf
-    yf = -HEX_R - FAIR_NOSE           # leading-edge y, forward of the hex front vertex
+    yf = FAIR_BACK - FAIR_NOSE        # leading-edge y, forward of the lattice
     # Plan-view triangle (full width at the back, vertex forward) extruded to a
-    # constant height -> flat horizontal top and bottom.
+    # constant height -> flat horizontal top and bottom. align=None keeps the raw
+    # coords -- Polygon otherwise re-centers the shape onto the lattice.
     tri = Plane.XY * Polygon(
-        (-FAIR_HALF_SPAN, FAIR_BACK), (FAIR_HALF_SPAN, FAIR_BACK), (0, yf)
+        (-FAIR_HALF_SPAN, FAIR_BACK), (FAIR_HALF_SPAN, FAIR_BACK), (0, yf), align=None
     )
     wedge = extrude(tri, amount=hf, both=True)
     # Carve the bar seats so the prow follows the round cups and touches the bar.
