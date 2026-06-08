@@ -65,7 +65,7 @@ GP_ROUND_Z = GP_TOP_Z - GP_LEN       # rounded tip / pin-hole center
 TIE_W = 6.0                           # tie width grooved into the cup edges
 RAMP_ANG = 22.0                       # taper: open at the outboard edge
 TIE_FLOOR_Z = PLATE_BOT_Z            # channel floor flush with the deck underside
-FLOOR_TILT = 17.0                     # shelf floor ramps up toward the bar (deg)
+FLOOR_TILT = 18.0                     # shelf floor ramps up toward the bar (deg)
 TIE_OPEN_ANG = 30.0                   # slope of the channel's inboard exit wall (deg)
 
 
