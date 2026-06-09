@@ -49,6 +49,7 @@ PLATE_T = 6.0                         # plate thickness (Z)
 PLATE_TOP_Z = GROOVE_R + SHELL_WALL   # 13.8: top flush with the cup tops
 PLATE_BOT_Z = PLATE_TOP_Z - PLATE_T
 HUB_D = 34.0                          # deck widens to this Ø disc at mid-span
+HUB_RECESS = 4.0                      # depth of the recess cut into the disc top
 
 # ---- GoPro 2-prong tab mount (male, underside) ------------------------------
 GP_FINGER_T = 3.0
@@ -131,6 +132,8 @@ def _plate():
     plate = Pos(0, 0, mid_z) * Box(2 * BAR_X, 2 * Y_R, PLATE_T)
     # Widen the deck to a Ø HUB_D disc at mid-span (same thickness as the deck).
     plate = plate + Pos(0, 0, mid_z) * Cylinder(HUB_D / 2, PLATE_T)
+    # Recess the top of that disc by HUB_RECESS, leaving a floor below.
+    plate = plate - Pos(0, 0, PLATE_TOP_Z - HUB_RECESS + 10) * Cylinder(HUB_D / 2, 20)
     for bx in (-BAR_X, BAR_X):
         plate = plate - Pos(bx, 0, 0) * (
             Rot(90, 0, 0) * Cylinder(GROOVE_R + SEAT_CLEAR, 2 * HEX_R + 6)
