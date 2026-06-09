@@ -49,7 +49,7 @@ PLATE_T = 6.0                         # plate thickness (Z)
 PLATE_TOP_Z = GROOVE_R + SHELL_WALL   # 13.8: top flush with the cup tops
 PLATE_BOT_Z = PLATE_TOP_Z - PLATE_T
 HUB_D = 34.0                          # deck widens to this Ø disc at mid-span
-HUB_RECESS = 4.0                      # depth of the recess cut into the disc top
+HUB_RECESS = 3.0                      # depth of the recess cut into the disc top
 
 # ---- GoPro 2-prong tab mount (male, underside) ------------------------------
 GP_FINGER_T = 3.0
