@@ -88,12 +88,12 @@ def _gopro_mount():
         )
         finger = finger - hole
         m = finger if m is None else m + finger
-    # Tap one outer prong (like a real GoPro clevis) so the M5 screw threads in.
+    # Tap the cradle-side outer prong (like a real GoPro clevis) for the M5 screw.
     thread = IsoThread(
         major_diameter=GP_HOLE_D, pitch=GP_THREAD_PITCH, length=GP_FINGER_T,
         external=False, end_finishes=("fade", "fade"),
     )
-    m = m + Pos(GP_X + GP_PITCH - GP_FINGER_T / 2, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
+    m = m + Pos(GP_X - GP_PITCH - GP_FINGER_T / 2, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
     return m
 
 
