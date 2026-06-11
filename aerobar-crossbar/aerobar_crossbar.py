@@ -26,6 +26,7 @@ from build123d import (
     extrude,
     mirror,
 )
+from bd_warehouse.thread import IsoThread
 
 # ---- Bar / saddle geometry --------------------------------------------------
 BAR_D = 22.2
@@ -58,6 +59,7 @@ GP_PITCH = GP_FINGER_T + GP_GAP       # center-to-center spacing of the prongs
 GP_WIDTH_Y = 15.0
 GP_ROUND_R = GP_WIDTH_Y / 2
 GP_HOLE_D = 5.0
+GP_THREAD_PITCH = 0.8                 # M5 coarse: one prong is tapped for the screw
 GP_LEN = 17.0                         # straight prong length, root to pin-hole
 GP_EMBED = 1.5                        # prong roots embed this far up into the plate
 GP_TOP_Z = PLATE_BOT_Z               # prongs root straight into the plate underside
@@ -85,6 +87,12 @@ def _gopro_mount():
         )
         finger = finger - hole
         m = finger if m is None else m + finger
+    # Tap one outer prong (like a real GoPro clevis) so the M5 screw threads in.
+    thread = IsoThread(
+        major_diameter=GP_HOLE_D, pitch=GP_THREAD_PITCH, length=GP_FINGER_T,
+        external=False, end_finishes=("fade", "fade"),
+    )
+    m = m + Pos(GP_PITCH - GP_FINGER_T / 2, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
     return m
 
 

@@ -8,7 +8,8 @@ side (secured with one zip tie per side, grooved into the cup top/bottom) and ha
 a GoPro 3-prong clevis (the female side) underneath to aim a light. The mid-span
 is a single **bare horizontal plate** — a 6 mm-thick deck whose top face is flush
 with the top of the cradle cups (z = 13.8 mm). The clevis's three prongs root
-directly into the underside of the plate at center. Over each cup an open tie
+directly into the underside of the plate at center; one outer prong is tapped
+M5 (×0.8) so the GoPro thumbscrew threads straight in. Over each cup an open tie
 channel is cut
 through the deck and cup top, concentric with the bar and down to its surface, so
 a zip tie wraps the rounded back of the cup with no material capping it above.

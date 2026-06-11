@@ -3,21 +3,6 @@ revision = 3
 requires-python = "==3.12.*"
 
 [[package]]
-name = "seth-3d"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "build123d" },
-    { name = "playwright" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "build123d", specifier = "==0.10.0" },
-    { name = "playwright", specifier = "==1.60.0" },
-]
-
-[[package]]
 name = "anytree"
 version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
@@ -33,6 +18,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/be/a5/8e3f9b6771b0b408517c82d97aed8f2036509bc247d46114925e32fe33f0/asttokens-3.0.1.tar.gz", hash = "sha256:71a4ee5de0bde6a31d64f6b13f2293ac190344478f081c3d1bccfcf5eacb0cb7", size = 62308, upload-time = "2025-11-15T16:43:48.578Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/39/e7eaf1799466a4aef85b6a4fe7bd175ad2b1c6345066aa33f1f58d4b18d0/asttokens-3.0.1-py3-none-any.whl", hash = "sha256:15a3ebc0f43c2d0a50eeafea25e19046c68398e487b9f1f5b517f7c0f40f976a", size = 27047, upload-time = "2025-11-15T16:43:16.109Z" },
+]
+
+[[package]]
+name = "bd-warehouse"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "build123d" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ff/67/60edfe8be58d2a76b179a013be714d7e88006b064a71964d9dc912537bb2/bd_warehouse-0.2.0.tar.gz", hash = "sha256:9f2efe3aba208d25df87f48d4c5a387768c1e5111c20d8250f81c47c83562857", size = 7495756, upload-time = "2026-02-19T16:39:40.516Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/bb/207f7d92a33fff90530e044d3ac4227ff5cafdd22e142fdd3569919b8df1/bd_warehouse-0.2.0-py3-none-any.whl", hash = "sha256:1fe66a491a81dd131a864677bab15257c9b6e32412cd5a5ab85c2c24b3c3617b", size = 113580, upload-time = "2026-02-19T16:39:38.942Z" },
 ]
 
 [[package]]
@@ -549,6 +547,23 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/65/94/7698add8f276dbab7a9de9fb6b0e02fc13ee61d51c7c3f85ac28b65e1239/scipy-1.17.1-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:f590cd684941912d10becc07325a3eeb77886fe981415660d9265c4c418d0bea", size = 37625856, upload-time = "2026-02-23T00:19:00.307Z" },
     { url = "https://files.pythonhosted.org/packages/a2/84/dc08d77fbf3d87d3ee27f6a0c6dcce1de5829a64f2eae85a0ecc1f0daa73/scipy-1.17.1-cp312-cp312-win_amd64.whl", hash = "sha256:41b71f4a3a4cab9d366cd9065b288efc4d4f3c0b37a91a8e0947fb5bd7f31d87", size = 36549682, upload-time = "2026-02-23T00:19:07.67Z" },
     { url = "https://files.pythonhosted.org/packages/bc/98/fe9ae9ffb3b54b62559f52dedaebe204b408db8109a8c66fdd04869e6424/scipy-1.17.1-cp312-cp312-win_arm64.whl", hash = "sha256:f4115102802df98b2b0db3cce5cb9b92572633a1197c77b7553e5203f284a5b3", size = 24547340, upload-time = "2026-02-23T00:19:12.024Z" },
+]
+
+[[package]]
+name = "seth-3d"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "bd-warehouse" },
+    { name = "build123d" },
+    { name = "playwright" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "bd-warehouse", specifier = ">=0.2.0" },
+    { name = "build123d", specifier = "==0.10.0" },
+    { name = "playwright", specifier = "==1.60.0" },
 ]
 
 [[package]]
