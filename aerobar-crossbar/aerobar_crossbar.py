@@ -217,10 +217,11 @@ def _tie_tunnel():
         * Box(3 * big, TIE_W + 4, 4 * big)
     )
     # Extend the slot down to the angled deck underside so it passes the whole way
-    # through the (thicker) deck. Bounding it by the underside plane keeps the cut
-    # within the deck instead of carving deeper into the cradle.
+    # through the (thicker) deck. Bound it by the underside plane AND subtract the
+    # cradle, so the slot stops where it meets the cup wall instead of carving into
+    # it -- the deck-only material gets removed, the cradle is left intact.
     ext = Pos(e4x, 0, (TIE_FLOOR_Z - 4) / 2) * Box(2 * big, TIE_W, TIE_FLOOR_Z + 4)
-    ext = ext - _underside_cutter()
+    ext = ext - _underside_cutter() - _cradle(1)
     return ((floor + ext) & slant) - bore
 
 
