@@ -15,6 +15,7 @@ from pathlib import Path
 
 from build123d import (
     Box,
+    Cone,
     Cylinder,
     Plane,
     Pos,
@@ -60,6 +61,9 @@ GP_WIDTH_Y = 15.0
 GP_ROUND_R = GP_WIDTH_Y / 2
 GP_HOLE_D = 5.0
 GP_THREAD_PITCH = 0.8                 # M5 coarse: one prong is tapped for the screw
+GP_CONE_H = 2.5                       # outboard cone on the tapped prong (more thread)
+GP_CONE_R_BASE = 5.25                 # cone base radius (at the prong face)
+GP_CONE_R_TOP = 3.75                  # cone tip radius
 GP_LEN = 17.0                         # straight prong length, root to pin-hole
 GP_EMBED = 1.5                        # prong roots embed this far up into the plate
 GP_TOP_Z = PLATE_BOT_Z               # prongs root straight into the plate underside
@@ -74,26 +78,42 @@ FLOOR_TILT = 17.0                     # shelf floor ramps up toward the bar (deg
 TIE_OPEN_ANG = 30.0                   # slope of the channel's inboard exit wall (deg)
 
 
-def _gopro_mount():
-    m = None
-    top = GP_TOP_Z + GP_EMBED        # embed the prong roots up into the plate
-    for fx in (GP_X - GP_PITCH, GP_X, GP_X + GP_PITCH):   # three prongs (female clevis)
-        straight = Pos(fx, 0, (top + GP_ROUND_Z) / 2) * Box(
-            GP_FINGER_T, GP_WIDTH_Y, top - GP_ROUND_Z
-        )
-        tip = Pos(fx, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * Cylinder(GP_ROUND_R, GP_FINGER_T))
-        finger = straight + tip
-        hole = Pos(fx, 0, GP_ROUND_Z) * (
+def _prong(fx, top, threaded=False):
+    """One clevis prong: a flat finger with a rounded, drilled tip. The threaded
+    prong also gets an outboard cone (more thread depth) and an M5 internal thread
+    through prong + cone, like a real GoPro female clevis."""
+    straight = Pos(fx, 0, (top + GP_ROUND_Z) / 2) * Box(
+        GP_FINGER_T, GP_WIDTH_Y, top - GP_ROUND_Z
+    )
+    tip = Pos(fx, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * Cylinder(GP_ROUND_R, GP_FINGER_T))
+    finger = straight + tip
+    if not threaded:
+        return finger - Pos(fx, 0, GP_ROUND_Z) * (
             Rot(0, 90, 0) * Cylinder(GP_HOLE_D / 2, GP_FINGER_T + 2)
         )
-        finger = finger - hole
-        m = finger if m is None else m + finger
-    # Tap the cradle-side outer prong (like a real GoPro clevis) for the M5 screw.
+    base_x = fx - GP_FINGER_T / 2 + 0.5        # cone base (large), overlapping the prong
+    cone_tip = base_x - GP_CONE_H              # outboard tip (small) of the cone
+    inboard_face = fx + GP_FINGER_T / 2        # inboard face of the prong
+    # Cone is centroid-centered; place its center so the base sits at base_x and it
+    # tapers outboard. Rot(0,-90) sends the large bottom toward +x (the prong).
+    finger = finger + Pos(base_x - GP_CONE_H / 2, 0, GP_ROUND_Z) * (
+        Rot(0, -90, 0) * Cone(GP_CONE_R_BASE, GP_CONE_R_TOP, GP_CONE_H)
+    )
+    finger = finger - Pos((inboard_face + cone_tip) / 2, 0, GP_ROUND_Z) * (
+        Rot(0, 90, 0) * Cylinder(GP_HOLE_D / 2, inboard_face - cone_tip + 2)
+    )
     thread = IsoThread(
-        major_diameter=GP_HOLE_D, pitch=GP_THREAD_PITCH, length=GP_FINGER_T,
+        major_diameter=GP_HOLE_D, pitch=GP_THREAD_PITCH, length=inboard_face - cone_tip,
         external=False, end_finishes=("fade", "fade"),
     )
-    m = m + Pos(GP_X - GP_PITCH - GP_FINGER_T / 2, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
+    return finger + Pos(cone_tip, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
+
+
+def _gopro_mount():
+    top = GP_TOP_Z + GP_EMBED        # embed the prong roots up into the plate
+    m = _prong(GP_X - GP_PITCH, top, threaded=True)   # cradle-side, tapped
+    m = m + _prong(GP_X, top)
+    m = m + _prong(GP_X + GP_PITCH, top)
     return m
 
 
