@@ -60,7 +60,8 @@ GP_GAP = 3.0
 GP_PITCH = GP_FINGER_T + GP_GAP       # center-to-center spacing of the prongs
 GP_WIDTH_Y = 15.0
 GP_ROUND_R = GP_WIDTH_Y / 2
-GP_HOLE_D = 5.0
+GP_HOLE_D = 5.0                       # tapped prong: M5 major diameter
+GP_CLEAR_D = 5.4                      # other two prongs: M5 clearance (a touch loose)
 GP_THREAD_PITCH = 0.8                 # M5 coarse: one prong is tapped for the screw
 GP_CONE_H = 2.5                       # outboard cone on the tapped prong (more thread)
 GP_CONE_R_BASE = 5.25                 # cone base radius (at the prong face)
@@ -91,7 +92,7 @@ def _prong(fx, top, threaded=False):
     finger = straight + tip
     if not threaded:
         return finger - Pos(fx, 0, GP_ROUND_Z) * (
-            Rot(0, 90, 0) * Cylinder(GP_HOLE_D / 2, GP_FINGER_T + 2)
+            Rot(0, 90, 0) * Cylinder(GP_CLEAR_D / 2, GP_FINGER_T + 2)
         )
     base_x = fx - GP_FINGER_T / 2 + 0.5        # cone base (large), overlapping the prong
     cone_tip = base_x - GP_CONE_H              # outboard tip (small) of the cone
