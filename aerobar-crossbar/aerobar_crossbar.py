@@ -64,6 +64,7 @@ GP_LEN = 17.0                         # straight prong length, root to pin-hole
 GP_EMBED = 1.5                        # prong roots embed this far up into the plate
 GP_TOP_Z = PLATE_BOT_Z               # prongs root straight into the plate underside
 GP_ROUND_Z = GP_TOP_Z - GP_LEN       # rounded tip / pin-hole center
+GP_X = -BAR_X / 2                     # mount center: midway between disc and left cup
 
 # ---- Zip-tie channel --------------------------------------------------------
 TIE_W = 6.0                           # tie width grooved into the cup edges
@@ -76,7 +77,7 @@ TIE_OPEN_ANG = 30.0                   # slope of the channel's inboard exit wall
 def _gopro_mount():
     m = None
     top = GP_TOP_Z + GP_EMBED        # embed the prong roots up into the plate
-    for fx in (-GP_PITCH, 0, GP_PITCH):   # three prongs (female clevis)
+    for fx in (GP_X - GP_PITCH, GP_X, GP_X + GP_PITCH):   # three prongs (female clevis)
         straight = Pos(fx, 0, (top + GP_ROUND_Z) / 2) * Box(
             GP_FINGER_T, GP_WIDTH_Y, top - GP_ROUND_Z
         )
@@ -92,7 +93,7 @@ def _gopro_mount():
         major_diameter=GP_HOLE_D, pitch=GP_THREAD_PITCH, length=GP_FINGER_T,
         external=False, end_finishes=("fade", "fade"),
     )
-    m = m + Pos(GP_PITCH - GP_FINGER_T / 2, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
+    m = m + Pos(GP_X + GP_PITCH - GP_FINGER_T / 2, 0, GP_ROUND_Z) * (Rot(0, 90, 0) * thread)
     return m
 
 
