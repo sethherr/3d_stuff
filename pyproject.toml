@@ -5,6 +5,7 @@ description = "build123d CAD parts + Playwright snapshots"
 # 3.14 has no build123d/OCP wheels yet, so we cap at <3.13 (mise pins 3.12.13).
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "bd-warehouse>=0.2.0",
     "build123d==0.10.0",
     "playwright==1.60.0",
 ]
