@@ -11,6 +11,7 @@ into one watertight, printable solid.
 Run: python aerobar-crossbar/aerobar_crossbar.py
 """
 
+from math import atan2, degrees
 from pathlib import Path
 
 from build123d import (
@@ -155,21 +156,33 @@ def _cradle(sign):
     return cradle
 
 
+PLATE_BACK_Z = 0.0                    # angled underside drops to the cradle midpoint at the back
+
+
 def _plate():
-    """The solid horizontal mid-span deck. Spans cup to cup, full depth in Y,
-    with its top flush at PLATE_TOP_Z. The bar seats are carved so it merges into
-    each cup wall around the bar instead of intruding into it."""
-    mid_z = (PLATE_TOP_Z + PLATE_BOT_Z) / 2
-    plate = Pos(0, 0, mid_z) * Box(2 * BAR_X, 2 * Y_R, PLATE_T)
-    # Widen the deck to a Ø HUB_D disc at mid-span (same thickness as the deck).
-    plate = plate + Pos(0, 0, mid_z) * Cylinder(HUB_D / 2, PLATE_T)
-    # Recess the top of that disc by HUB_RECESS, leaving a floor below.
-    plate = plate - Pos(0, 0, PLATE_TOP_Z - HUB_RECESS + 10) * Cylinder(HUB_D / 2, 20)
+    """Wedge mid-span deck: top stays flat at PLATE_TOP_Z, the underside is angled
+    so the front edge stays at PLATE_BOT_Z and the back edge drops to the cradle
+    midpoint (PLATE_BACK_Z). Widens to a Ø HUB_D disc, recessed on top. Bar seats
+    are carved so it merges into each cup wall rather than intruding into the bar."""
+    z_low = -3.0
+    h = PLATE_TOP_Z - z_low
+    cz = (PLATE_TOP_Z + z_low) / 2
+    body = Pos(0, 0, cz) * Box(2 * BAR_X, 2 * Y_R, h)
+    body = body + Pos(0, 0, cz) * Cylinder(HUB_D / 2, h)
+    # Angle the underside about the front edge (y = -Y_R, z = PLATE_BOT_Z), dropping
+    # PLATE_BOT_Z - PLATE_BACK_Z over the 2*Y_R depth.
+    ang = degrees(atan2(PLATE_BOT_Z - PLATE_BACK_Z, 2 * Y_R))
+    big = 400
+    body = body - (
+        Pos(0, -Y_R, PLATE_BOT_Z) * Rot(-ang, 0, 0) * Pos(0, 0, -big / 2) * Box(big, big, big)
+    )
+    # Recess the disc top by HUB_RECESS, leaving a floor below.
+    body = body - Pos(0, 0, PLATE_TOP_Z - HUB_RECESS + 10) * Cylinder(HUB_D / 2, 20)
     for bx in (-BAR_X, BAR_X):
-        plate = plate - Pos(bx, 0, 0) * (
+        body = body - Pos(bx, 0, 0) * (
             Rot(90, 0, 0) * Cylinder(GROOVE_R + SEAT_CLEAR, 2 * HEX_R + 6)
         )
-    return plate
+    return body
 
 
 def _tie_tunnel():
