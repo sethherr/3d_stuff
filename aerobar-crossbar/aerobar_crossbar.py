@@ -159,6 +159,14 @@ def _cradle(sign):
 PLATE_BACK_Z = 0.0                    # angled underside drops to the cradle midpoint at the back
 
 
+def _underside_cutter():
+    """Half-space below the angled deck underside: a plane through the front edge
+    (y=-Y_R, z=PLATE_BOT_Z) dropping to PLATE_BACK_Z at the back (y=+Y_R)."""
+    ang = degrees(atan2(PLATE_BOT_Z - PLATE_BACK_Z, 2 * Y_R))
+    big = 400
+    return Pos(0, -Y_R, PLATE_BOT_Z) * Rot(-ang, 0, 0) * Pos(0, 0, -big / 2) * Box(big, big, big)
+
+
 def _plate():
     """Wedge mid-span deck: top stays flat at PLATE_TOP_Z, the underside is angled
     so the front edge stays at PLATE_BOT_Z and the back edge drops to the cradle
@@ -169,13 +177,8 @@ def _plate():
     cz = (PLATE_TOP_Z + z_low) / 2
     body = Pos(0, 0, cz) * Box(2 * BAR_X, 2 * Y_R, h)
     body = body + Pos(0, 0, cz) * Cylinder(HUB_D / 2, h)
-    # Angle the underside about the front edge (y = -Y_R, z = PLATE_BOT_Z), dropping
-    # PLATE_BOT_Z - PLATE_BACK_Z over the 2*Y_R depth.
-    ang = degrees(atan2(PLATE_BOT_Z - PLATE_BACK_Z, 2 * Y_R))
-    big = 400
-    body = body - (
-        Pos(0, -Y_R, PLATE_BOT_Z) * Rot(-ang, 0, 0) * Pos(0, 0, -big / 2) * Box(big, big, big)
-    )
+    # Angle the underside about the front edge, dropping to PLATE_BACK_Z at the back.
+    body = body - _underside_cutter()
     # Recess the disc top by HUB_RECESS, leaving a floor below.
     body = body - Pos(0, 0, PLATE_TOP_Z - HUB_RECESS + 10) * Cylinder(HUB_D / 2, 20)
     for bx in (-BAR_X, BAR_X):
@@ -213,7 +216,12 @@ def _tie_tunnel():
         * Pos(1.5 * big, 0, 0)
         * Box(3 * big, TIE_W + 4, 4 * big)
     )
-    return (floor & slant) - bore
+    # Extend the slot down to the angled deck underside so it passes the whole way
+    # through the (thicker) deck. Bounding it by the underside plane keeps the cut
+    # within the deck instead of carving deeper into the cradle.
+    ext = Pos(e4x, 0, (TIE_FLOOR_Z - 4) / 2) * Box(2 * big, TIE_W, TIE_FLOOR_Z + 4)
+    ext = ext - _underside_cutter()
+    return ((floor + ext) & slant) - bore
 
 
 def gen_step():
