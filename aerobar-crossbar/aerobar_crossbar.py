@@ -51,10 +51,10 @@ PLATE_BOT_Z = PLATE_TOP_Z - PLATE_T
 HUB_D = 34.0                          # deck widens to this Ø disc at mid-span
 HUB_RECESS = 3.0                      # depth of the recess cut into the disc top
 
-# ---- GoPro 2-prong tab mount (male, underside) ------------------------------
+# ---- GoPro 3-prong clevis mount (female, underside) -------------------------
 GP_FINGER_T = 3.0
 GP_GAP = 3.0
-GP_OFFX = (GP_FINGER_T + GP_GAP) / 2
+GP_PITCH = GP_FINGER_T + GP_GAP       # center-to-center spacing of the prongs
 GP_WIDTH_Y = 15.0
 GP_ROUND_R = GP_WIDTH_Y / 2
 GP_HOLE_D = 5.0
@@ -74,7 +74,7 @@ TIE_OPEN_ANG = 30.0                   # slope of the channel's inboard exit wall
 def _gopro_mount():
     m = None
     top = GP_TOP_Z + GP_EMBED        # embed the prong roots up into the plate
-    for fx in (-GP_OFFX, GP_OFFX):
+    for fx in (-GP_PITCH, 0, GP_PITCH):   # three prongs (female clevis)
         straight = Pos(fx, 0, (top + GP_ROUND_Z) / 2) * Box(
             GP_FINGER_T, GP_WIDTH_Y, top - GP_ROUND_Z
         )
