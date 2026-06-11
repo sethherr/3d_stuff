@@ -69,6 +69,7 @@ GP_EMBED = 1.5                        # prong roots embed this far up into the p
 GP_TOP_Z = PLATE_BOT_Z               # prongs root straight into the plate underside
 GP_ROUND_Z = GP_TOP_Z - GP_LEN       # rounded tip / pin-hole center
 GP_X = -BAR_X / 2                     # mount center: midway between disc and left cup
+GP_Y = Y_R - GP_WIDTH_Y / 2           # shift mount back so its rear is flush with the deck back
 
 # ---- Zip-tie channel --------------------------------------------------------
 TIE_W = 6.0                           # tie width grooved into the cup edges
@@ -111,9 +112,10 @@ def _prong(fx, top, threaded=False):
 
 def _gopro_mount():
     top = GP_TOP_Z + GP_EMBED        # embed the prong roots up into the plate
-    m = _prong(GP_X - GP_PITCH, top, threaded=True)   # cradle-side, tapped
-    m = m + _prong(GP_X, top)
-    m = m + _prong(GP_X + GP_PITCH, top)
+    back = Pos(0, GP_Y, 0)           # shift back so the rear is flush with the deck
+    m = back * _prong(GP_X - GP_PITCH, top, threaded=True)   # cradle-side, tapped
+    m = m + back * _prong(GP_X, top)
+    m = m + back * _prong(GP_X + GP_PITCH, top)
     return m
 
 
